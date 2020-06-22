@@ -223,6 +223,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
             if (result == null) {
                 throw new ArgumentNullException(nameof(result));
             }
+            if (events == null) {
+                throw new ArgumentNullException(nameof(events));
+            }
             var context = result.Context.Validate();
 
             //
@@ -234,21 +237,21 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
             //
             var existing = await _database.ListAllAsync(siteId, discovererId);
 
-            var found = events.Select(ev => {
-                //
-                // Ensure we set the site id and discoverer id in the found applications
-                // have correct values.  Also set application id even though it should
-                // automatically happen later
-                //
+            //
+            // Ensure we set the site id and discoverer id in the found applications
+            // have correct values.  Also set application id even though it should
+            // automatically happen later
+            //
+            var eventList = events.ToList();
+            eventList.ForEach(ev => {
                 ev.Application.SiteId = siteId;
                 ev.Application.DiscovererId = discovererId;
                 ev.Application.ApplicationId = ApplicationInfoModelEx.CreateApplicationId(siteId,
                     ev.Application.ApplicationUri, ev.Application.ApplicationType);
-                return ev.Application;
             });
 
-            // Create endpoints lookup table per found application id
-            var endpoints = events.GroupBy(k => k.Application.ApplicationId).ToDictionary(
+            // Create endpoints lookup table per application id
+            var endpoints = eventList.GroupBy(k => k.Application.ApplicationId).ToDictionary(
                 group => group.Key,
                 group => group
                     .Select(ev => {
@@ -272,6 +275,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
             // and existing ones are patched only if they were previously reported by the same
             // discoverer.  New ones are simply added.
             //
+            var found = eventList.Select(ev => ev.Application);
             var remove = new HashSet<ApplicationInfoModel>(existing,
                 ApplicationInfoModelEx.LogicalEquality);
             var add = new HashSet<ApplicationInfoModel>(found,

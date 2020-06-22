@@ -254,7 +254,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
             if (string.IsNullOrEmpty(connection.Endpoint?.Url)) {
                 throw new ArgumentNullException(nameof(connection.Endpoint.Url));
             }
-            InitializeAsync().ConfigureAwait(false);
+            await InitializeAsync();
             var key = new ConnectionIdentifier(connection);
             while (!_cts.IsCancellationRequested) {
                 var client = GetOrCreateSession(key);
@@ -285,6 +285,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
         private async Task DiscoverAsync(Uri discoveryUrl, StringCollection localeIds,
             IEnumerable<string> caps, int timeout, HashSet<string> visitedUris,
             Queue<Tuple<Uri, List<string>>> queue, HashSet<DiscoveredEndpointModel> result) {
+
             var configuration = EndpointConfiguration.Create(_appConfig);
             configuration.OperationTimeout = timeout;
             using (var client = DiscoveryClient.Create(discoveryUrl, configuration)) {

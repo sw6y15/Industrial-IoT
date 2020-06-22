@@ -5,10 +5,7 @@
 
 namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher.Edge {
     using Microsoft.Azure.IIoT.Services.OpcUa.Publisher.Edge.Runtime;
-    using Microsoft.Azure.IIoT.OpcUa.Api.Registry.Clients;
-    using Microsoft.Azure.IIoT.OpcUa.Publisher;
-    using Microsoft.Azure.IIoT.OpcUa.Publisher.Services;
-    using Microsoft.Azure.IIoT.OpcUa.Protocol.Services;
+    using Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Clients;
     using Microsoft.Azure.IIoT.AspNetCore.Storage;
     using Microsoft.Azure.IIoT.AspNetCore.Cors;
     using Microsoft.Azure.IIoT.AspNetCore.Correlation;
@@ -19,9 +16,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher.Edge {
     using Microsoft.Azure.IIoT.Http.Default;
     using Microsoft.Azure.IIoT.Http.Ssl;
     using Microsoft.Azure.IIoT.Serializers;
-    using Microsoft.Azure.IIoT.Storage.CosmosDb.Services;
     using Microsoft.Azure.IIoT.Utils;
-    using Microsoft.ApplicationInsights.Extensibility;
     using Microsoft.AspNetCore.Authentication;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
@@ -29,6 +24,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher.Edge {
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
+    using Microsoft.ApplicationInsights.Extensibility;
     using Microsoft.OpenApi.Models;
     using Autofac;
     using Autofac.Extensions.DependencyInjection;
@@ -188,31 +184,19 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher.Edge {
             builder.RegisterType<CorsSetup>()
                 .AsImplementedInterfaces();
 
-            // ... Publisher services
-            builder.RegisterModule<PublisherServices>();
-            builder.RegisterType<CosmosDbServiceClient>()
+            // Publisher API
+            builder.RegisterType<PublishServicesApiAdapter>()
+                .AsImplementedInterfaces();
+            builder.RegisterType<PublisherServiceClient>()
                 .AsImplementedInterfaces();
 
-            // Registry services to lookup endpoints.
-            builder.RegisterType<RegistryServicesApiAdapter>()
-                .AsImplementedInterfaces();
-            builder.RegisterType<RegistryServiceClient>()
-                .AsImplementedInterfaces();
+            // ... other API proxy ...
 
-            builder.RegisterType<CosmosDbServiceClient>()
-                .AsImplementedInterfaces();
             builder.RegisterType<IoTHubServiceHttpClient>()
                 .AsImplementedInterfaces();
-
             builder.RegisterType<IoTHubSasTokenValidator>()
                 .AsImplementedInterfaces();
             builder.RegisterType<DistributedProtectedCache>()
-                .AsImplementedInterfaces();
-
-            // Bulk loading from edge
-            builder.RegisterType<NodeSetProcessor>()
-                .AsImplementedInterfaces();
-            builder.RegisterType<BulkPublishHandler>()
                 .AsImplementedInterfaces();
 
             // Activate all hosts

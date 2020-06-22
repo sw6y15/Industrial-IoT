@@ -20,6 +20,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher {
         /// <param name="builder"></param>
         protected override void Load(ContainerBuilder builder) {
 
+            builder.RegisterType<WriterGroupRegistry>()
+                .AsImplementedInterfaces().InstancePerLifetimeScope();
             builder.RegisterType<WriterGroupManagement>()
                 .AsImplementedInterfaces().InstancePerLifetimeScope();
             builder.RegisterType<DataSetWriterStateSync>()
@@ -28,6 +30,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher {
             builder.RegisterType<DataSetWriterEventBroker>()
                 .AsImplementedInterfaces().InstancePerLifetimeScope();
             builder.RegisterType<WriterGroupEventBroker>()
+                .AsImplementedInterfaces().InstancePerLifetimeScope();
+            builder.RegisterType<PublishedDataSetEventBroker>()
                 .AsImplementedInterfaces().InstancePerLifetimeScope();
 
             builder.RegisterType<WriterGroupDatabase>()

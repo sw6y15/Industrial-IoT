@@ -4,32 +4,32 @@
 // ------------------------------------------------------------
 
 namespace Microsoft.Azure.IIoT.Services.OpcUa.Twin.History {
-    using Autofac;
-    using Autofac.Extensions.DependencyInjection;
-    using Microsoft.ApplicationInsights.Extensibility;
-    using Microsoft.AspNetCore.Builder;
-    using Microsoft.AspNetCore.Hosting;
+    using Microsoft.Azure.IIoT.Services.OpcUa.Twin.History.Runtime;
+    using Microsoft.Azure.IIoT.Services.OpcUa.Twin.History.Auth;
     using Microsoft.Azure.IIoT.AspNetCore.Auth;
     using Microsoft.Azure.IIoT.AspNetCore.Auth.Clients;
     using Microsoft.Azure.IIoT.AspNetCore.Correlation;
     using Microsoft.Azure.IIoT.AspNetCore.Cors;
+    using Microsoft.Azure.IIoT.OpcUa.Registry.Models;
+    using Microsoft.Azure.IIoT.OpcUa.Api.Twin.Clients;
+    using Microsoft.Azure.IIoT.OpcUa.History.Clients;
+    using Microsoft.Azure.IIoT.Serializers;
     using Microsoft.Azure.IIoT.Auth;
     using Microsoft.Azure.IIoT.Diagnostics.AppInsights.Default;
     using Microsoft.Azure.IIoT.Http.Default;
     using Microsoft.Azure.IIoT.Http.Ssl;
     using Microsoft.Azure.IIoT.Hub.Client;
     using Microsoft.Azure.IIoT.Module.Default;
-    using Microsoft.Azure.IIoT.OpcUa.Api.Twin.Clients;
-    using Microsoft.Azure.IIoT.OpcUa.History.Clients;
-    using Microsoft.Azure.IIoT.OpcUa.Registry.Models;
-    using Microsoft.Azure.IIoT.Serializers;
-    using Microsoft.Azure.IIoT.Services.OpcUa.Twin.History.Auth;
-    using Microsoft.Azure.IIoT.Services.OpcUa.Twin.History.Runtime;
+    using Microsoft.AspNetCore.Builder;
+    using Microsoft.AspNetCore.Hosting;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
+    using Microsoft.ApplicationInsights.Extensibility;
     using Microsoft.OpenApi.Models;
+    using Autofac;
+    using Autofac.Extensions.DependencyInjection;
     using Prometheus;
     using System;
     using ILogger = Serilog.ILogger;
