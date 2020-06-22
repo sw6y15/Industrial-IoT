@@ -1,0 +1,25 @@
+#
+# Build simulation environment - Linux
+#
+parameters:
+  poolName: 'windows-2019'
+
+jobs:
+  - job: Build_environment
+    displayName: Build testing environment
+    pool:
+      vmImage: ${{ parameters.poolName }}
+    steps:
+    - task: AzurePowerShell@4
+      inputs:
+        azureSubscription: 'AzureIndustrialIot-conn'
+        ScriptType: 'FilePath'
+        ScriptPath: 'tools/scripts/deploy.ps1'
+        scriptArguments:
+          -type test `
+          -resourceGroupName automated-test-rg-1 `
+          -resourceGroupLocation eastus `
+          -subscriptionId 9dd2b4d0-3dad-4aeb-85d8-c3addb78127a `
+          -applicationName automated-test-rg-1 `
+          -aadClientSecret $(client_secret)
+        azurePowerShellVersion: 'LatestVersion'

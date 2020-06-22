@@ -1,0 +1,12 @@
+schedules:
+- cron: "1 0 * * 1"
+  displayName: Weekly Monday midnight build
+  branches:
+    include:
+    - master
+
+stages:
+- stage: testing
+  displayName: 'Automated Testing'
+  jobs:
+  - template: tools/templates/automatedtesting.yml

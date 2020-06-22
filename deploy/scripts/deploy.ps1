@@ -6,7 +6,7 @@
     Deploys the Industrial IoT services dependencies and optionally micro services and UI to Azure.
 
  .PARAMETER type
-    The type of deployment (minimum, local, services, simulation, app, all)
+    The type of deployment (minimum, local, services, simulation, app, all, test)
 
  .PARAMETER version
     Set to "latest" or another mcr image tag to deploy - if not set deploys current master branch ("preview").
@@ -58,10 +58,19 @@
 
  .PARAMETER numberOfWindowsGateways
     Number of windows gateways to deploy into the simulation
+
+ .PARAMETER aadClientId
+    Client Id of Azure Pipeline service connection client : AzureIndustrialIot-Conn
+
+ .PARAMETER aadClientSecret
+    The secret for the aadClientId
+
+ .PARAMETER aadTenantIdForTestEnv
+    The tenant Id used to configure test environment
 #>
 
 param(
-    [ValidateSet("minimum", "local", "services", "simulation", "app", "all")] [string] $type = "all",
+    [ValidateSet("minimum", "local", "services", "simulation", "app", "all", "test")] [string] $type = "all",
     [string] $version,
     [string] $applicationName,
     [string] $resourceGroupName,
@@ -76,6 +85,9 @@ param(
     [int] $numberOfLinuxGateways = 0,
     [int] $numberOfWindowsGateways = 0,
     [int] $numberOfSimulationsPerEdge = 0,
+    [string] $aadClientId = "da606082-3515-4fc2-988d-59b633931562",
+    [string] $aadClientSecret,
+    [string] $aadTenantIdForTestEnv = "6e660ce4-d51a-4585-80c6-58035e212354",
     $aadConfig,
     $context = $null,
     [switch] $testAllDeploymentOptions,
@@ -113,8 +125,16 @@ Function Select-Context() {
     }
     if (!$context) {
         try {
-            $connection = Connect-AzAccount -Environment $environment.Name `
+            if($script:automatedTest) {
+                Write-Host "Connecting using service principal for automated test env.."
+                $secStringPassword = ConvertTo-SecureString $script:aadClientSecret -AsPlainText -Force
+                $pscredential = New-Object System.Management.Automation.PSCredential($script:aadClientId, $secStringPassword)
+                $connection = Connect-AzAccount -ServicePrincipal -Credential $pscredential -Tenant $script:aadTenantIdForTestEnv
+            }
+            else {
+                $connection = Connect-AzAccount -Environment $environment.Name `
                 -ErrorAction Stop
+            }
             $context = $connection.Context
         }
         catch {
@@ -1073,7 +1093,13 @@ Function Test-All-Deployment-Options() {
 $ErrorActionPreference = "Stop"
 $script:ScriptDir = Split-Path $script:MyInvocation.MyCommand.Path
 $script:interactive = !$script:context
-
+$script:automatedTest = $false
+if ($script:type -eq "test") {
+    Write-Host "Deploying test environment.."
+    $script:type = "all"
+    $script:automatedTest = $true
+    $script:interactive = $false
+}
 $script:requiredProviders = @(
     "microsoft.devices",
     "microsoft.documentdb",
