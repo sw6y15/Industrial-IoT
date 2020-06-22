@@ -31,7 +31,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher.Runtime {
     /// </summary>
     public class Config : DiagnosticsConfig, IWebHostConfig, IIoTHubConfig,
         ICorsConfig, IOpenApiConfig, IRoleConfig,
-        ICosmosDbConfig, IItemContainerConfig, IRegistryConfig, ITwinConfig,
+        ICosmosDbConfig, IItemContainerConfig, IRegistryConfig,
         IForwardedHeadersConfig, IContainerRegistryConfig {
 
         /// <inheritdoc/>
@@ -67,8 +67,6 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher.Runtime {
         /// <inheritdoc/>
         public string OpenApiServerHost => _openApi.OpenApiServerHost;
 
-        /// <inheritdoc/>
-        public string OpcUaTwinServiceUrl => _api.OpcUaTwinServiceUrl;
         /// <inheritdoc/>
         public string OpcUaRegistryServiceUrl => _api.OpcUaRegistryServiceUrl;
 

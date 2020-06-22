@@ -170,7 +170,7 @@ namespace Microsoft.Azure.IIoT.App {
             services.AddSignalR()
                 .AddJsonSerializer()
                 .AddMessagePackSerializer()
-                .AddAzureSignalRService(Config)
+             //   .AddAzureSignalRService(Config)
                 ;
 
             services.AddServerSideBlazor()

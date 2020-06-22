@@ -33,7 +33,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Models {
             if (deviceId.StartsWith(kDeviceIdPrefix)) {
                 return deviceId.Substring(kDeviceIdPrefix.Length);
             }
-            throw new ArgumentException("Not a writer group id");
+            return null;
         }
 
         /// <summary>

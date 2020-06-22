@@ -423,7 +423,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Twin.Services {
                 builder.RegisterType<DataSetEntityDatabase>().AsImplementedInterfaces();
                 builder.RegisterType<DataSetWriterDatabase>().AsImplementedInterfaces();
                 builder.RegisterType<WriterGroupDatabase>().AsImplementedInterfaces();
-                builder.RegisterType<WriterGroupManagement>().AsImplementedInterfaces();
+                builder.RegisterType<WriterGroupRegistry>().AsImplementedInterfaces();
                 builder.RegisterType<PublisherAdapter>().As<IPublishServices>();
             });
             return mock;

@@ -11,6 +11,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Twin.Runtime {
     using Microsoft.Azure.IIoT.AspNetCore.Cors.Runtime;
     using Microsoft.Azure.IIoT.AspNetCore.ForwardedHeaders;
     using Microsoft.Azure.IIoT.AspNetCore.ForwardedHeaders.Runtime;
+    using Microsoft.Azure.IIoT.OpcUa.Api.Publisher;
     using Microsoft.Azure.IIoT.Hub.Client;
     using Microsoft.Azure.IIoT.Hub.Client.Runtime;
     using Microsoft.Azure.IIoT.Auth.Runtime;
@@ -18,6 +19,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Twin.Runtime {
     using Microsoft.Azure.IIoT.Deploy.Runtime;
     using Microsoft.Azure.IIoT.Diagnostics;
     using Microsoft.Azure.IIoT.Hosting;
+    using Microsoft.Azure.IIoT.Api.Runtime;
     using Microsoft.Extensions.Configuration;
 
     /// <summary>
@@ -25,7 +27,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Twin.Runtime {
     /// </summary>
     public class Config : DiagnosticsConfig, IWebHostConfig, IIoTHubConfig,
         ICorsConfig, IOpenApiConfig, IForwardedHeadersConfig, IRoleConfig,
-        IContainerRegistryConfig {
+        IContainerRegistryConfig, IPublisherConfig {
 
         /// <inheritdoc/>
         public string IoTHubConnString => _hub.IoTHubConnString;
@@ -68,6 +70,8 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Twin.Runtime {
         public string ImagesTag => _cr.ImagesTag;
 
         /// <inheritdoc/>
+        public string OpcUaPublisherServiceUrl => _api.OpcUaPublisherServiceUrl;
+        /// <inheritdoc/>
         public bool UseRoles => GetBoolOrDefault(PcsVariable.PCS_AUTH_ROLES);
 
         /// <inheritdoc/>
@@ -87,6 +91,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Twin.Runtime {
             _openApi = new OpenApiConfig(configuration);
             _host = new WebHostConfig(configuration);
             _hub = new IoTHubConfig(configuration);
+            _api = new ApiConfig(configuration);
             _cors = new CorsConfig(configuration);
             _fh = new ForwardedHeadersConfig(configuration);
             _cr = new ContainerRegistryConfig(configuration);
@@ -96,6 +101,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Twin.Runtime {
         private readonly OpenApiConfig _openApi;
         private readonly WebHostConfig _host;
         private readonly CorsConfig _cors;
+        private readonly ApiConfig _api;
         private readonly IoTHubConfig _hub;
         private readonly ForwardedHeadersConfig _fh;
     }

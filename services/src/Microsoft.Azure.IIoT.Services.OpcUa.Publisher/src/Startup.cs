@@ -15,6 +15,9 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher {
     using Microsoft.Azure.IIoT.OpcUa.Publisher.Deploy;
     using Microsoft.Azure.IIoT.OpcUa.Api.Registry.Clients;
     using Microsoft.Azure.IIoT.Storage.CosmosDb.Services;
+    using Microsoft.Azure.IIoT.Messaging.Default;
+    using Microsoft.Azure.IIoT.Messaging.ServiceBus.Clients;
+    using Microsoft.Azure.IIoT.Messaging.ServiceBus.Services;
     using Microsoft.Azure.IIoT.Http.Ssl;
     using Microsoft.Azure.IIoT.Http.Default;
     using Microsoft.Azure.IIoT.Auth;
@@ -186,10 +189,25 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher {
             builder.RegisterType<CorsSetup>()
                 .AsImplementedInterfaces();
 
+            // Register event bus for event publishing
+            builder.RegisterType<EventBusHost>()
+                .AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<ServiceBusClientFactory>()
+                .AsImplementedInterfaces();
+            builder.RegisterType<ServiceBusEventBus>()
+                .AsImplementedInterfaces().SingleInstance();
+
             // ... Publisher services
             builder.RegisterModule<PublisherServices>();
             builder.RegisterType<CosmosDbServiceClient>()
                 .AsImplementedInterfaces();
+
+            //   // TODO: Enable as API so edge can call
+            // Bulk loading from edge
+            //   builder.RegisterType<NodeSetProcessor>()
+            //       .AsImplementedInterfaces();
+            //   builder.RegisterType<BulkPublishHandler>()
+            //       .AsImplementedInterfaces();
 
             // Registry services are required to lookup endpoints.
             builder.RegisterType<RegistryServicesApiAdapter>()
