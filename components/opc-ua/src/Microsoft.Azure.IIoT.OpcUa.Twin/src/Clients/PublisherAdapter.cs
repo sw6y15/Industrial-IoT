@@ -60,7 +60,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Twin.Clients {
                             PublishedVariableNodeId = request.Item.NodeId,
                             HeartbeatInterval = request.Item.HeartbeatInterval,
                             PublishedVariableDisplayName = request.Item.DisplayName,
-                            SamplingInterval = request.Item.SamplingInterval
+                            SamplingInterval = request.Item.SamplingInterval,
+                            QueueSize = 1
                         }
                     }
                 });
@@ -107,12 +108,20 @@ namespace Microsoft.Azure.IIoT.OpcUa.Twin.Clients {
                     new DataSetAddVariableBatchRequestModel {
                         DataSetPublishingInterval = publishingInterval,
                         User = request.Header?.Elevation,
+                        // TODO Engine = new EngineConfigurationModel() {
+                        // TODO     BatchSize = 50,
+                        // TODO     BatchTriggerInterval = TimeSpan.FromSeconds(10),
+                        // TODO     DiagnosticsInterval = TimeSpan.FromSeconds(60),
+                        // TODO     MaxMessageSize = 0
+                        // TODO }
+                        // TODO ResolveDisplayName = true
                         Variables = request.NodesToAdd
                             .Select(n => new DataSetAddVariableRequestModel {
                                 PublishedVariableNodeId = n.NodeId,
                                 HeartbeatInterval = n.HeartbeatInterval,
                                 PublishedVariableDisplayName = n.DisplayName,
-                                SamplingInterval = n.SamplingInterval
+                                SamplingInterval = n.SamplingInterval,
+                                QueueSize = 1
                             })
                             .ToList()
                     });
