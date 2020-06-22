@@ -1,8 +1,10 @@
 #
-# Build simulation environment - Linux
+# Build automated test environment
 #
 parameters:
   poolName: 'windows-2019'
+  rgName: 'automated-test-rg-1'
+  location: 'eastus'
 
 jobs:
   - job: Build_environment
@@ -17,9 +19,11 @@ jobs:
         ScriptPath: 'tools/scripts/deploy.ps1'
         scriptArguments:
           -type test `
-          -resourceGroupName automated-test-rg-1 `
-          -resourceGroupLocation eastus `
-          -subscriptionId 9dd2b4d0-3dad-4aeb-85d8-c3addb78127a `
-          -applicationName automated-test-rg-1 `
-          -aadClientSecret $(client_secret)
+          -resourceGroupName ${{ parameters.rgName }} `
+          -resourceGroupLocation ${{ parameters.location }} `
+          -subscriptionId $(subscription_id) `
+          -applicationName ${{ parameters.rgName }} `
+          -aadClientId $(client_id) `
+          -aadClientSecret $(client_secret) `
+          -aadTenantIdForTestEnv $(tenant_id)
         azurePowerShellVersion: 'LatestVersion'
