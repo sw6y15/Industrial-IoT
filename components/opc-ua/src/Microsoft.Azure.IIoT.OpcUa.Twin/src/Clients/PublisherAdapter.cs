@@ -108,7 +108,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Twin.Clients {
                     new DataSetAddVariableBatchRequestModel {
                         DataSetPublishingInterval = publishingInterval,
                         User = request.Header?.Elevation,
-                        // TODO Engine = new EngineConfigurationModel() {
+                        // TODO Engine = new EngineConfigurationModel {
                         // TODO     BatchSize = 50,
                         // TODO     BatchTriggerInterval = TimeSpan.FromSeconds(10),
                         // TODO     DiagnosticsInterval = TimeSpan.FromSeconds(60),

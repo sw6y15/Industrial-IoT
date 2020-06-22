@@ -757,7 +757,7 @@ namespace Microsoft.Azure.IIoT.Serializers {
                 sb.AppendLine(",");
                 // Append raw value as string
                 sb.Append("    \"Raw\": \"");
-                if (raw is IFormattable f) {
+                if (raw is IFormattable f && !(raw is Guid)) {
                     sb.Append(f.ToString("G", CultureInfo.InvariantCulture));
                 }
                 else {

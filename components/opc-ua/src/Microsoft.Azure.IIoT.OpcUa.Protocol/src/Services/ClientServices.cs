@@ -245,7 +245,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
         }
 
         /// <inheritdoc/>
-        public Task<T> ExecuteServiceAsync<T>(ConnectionModel connection,
+        public async Task<T> ExecuteServiceAsync<T>(ConnectionModel connection,
             CredentialModel elevation, int priority, Func<Session, Task<T>> service,
             TimeSpan? timeout, CancellationToken ct, Func<Exception, bool> handler) {
             if (connection.Endpoint == null) {
@@ -256,20 +256,20 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
             }
             await InitializeAsync();
             var key = new ConnectionIdentifier(connection);
-            while (!_cts.IsCancellationRequested) {
+            while (true) {
+                _cts.Token.ThrowIfCancellationRequested();
                 var client = GetOrCreateSession(key);
                 if (!client.Inactive) {
                     var scheduled = client.TryScheduleServiceCall(elevation, priority,
                         service, handler, timeout, ct, out var result);
                     if (scheduled) {
                         // Session is owning the task to completion now.
-                        return result;
+                        return await result;
                     }
                 }
                 // Create new session next go around
                 EvictIfInactive(key);
             }
-            return Task.FromCanceled<T>(_cts.Token);
         }
 
         /// <summary>
