@@ -47,11 +47,14 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         public IEnumerable<NetworkMessageModel> EncodeBatch(
             IEnumerable<DataSetMessageModel> messages, int maxMessageSize) {
 
-            var notifications = GetNetworkMessages(messages);
+            // by design all messages are generated in the same session context,
+            // therefore it is safe to get the first message's context
+            var encodingContext = messages.FirstOrDefault(m => m.ServiceMessageContext != null)
+                ?.ServiceMessageContext;
+            var notifications = GetNetworkMessages(messages, encodingContext);
             if (notifications.Count() == 0) {
                 yield break;
             }
-            var encodingContext = messages.First().ServiceMessageContext;
             var current = notifications.GetEnumerator();
             var processing = current.MoveNext();
             var messageSize = 2; // array brackets
@@ -94,7 +97,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                         UseUriEncoding = true,
                         UseReversibleEncoding = false
                     };
-                    foreach(var element in chunk) { 
+                    foreach(var element in chunk) {
                         encoder.WriteEncodeable(null, element);
                     }
                     encoder.Close();
@@ -120,11 +123,14 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         /// <inheritdoc/>
         public IEnumerable<NetworkMessageModel> Encode(
             IEnumerable<DataSetMessageModel> messages, int maxMessageSize) {
-            var notifications = GetNetworkMessages(messages);
+            // by design all messages are generated in the same session context,
+            // therefore it is safe to get the first message's context
+            var encodingContext = messages.FirstOrDefault(m => m.ServiceMessageContext != null)
+                ?.ServiceMessageContext;
+            var notifications = GetNetworkMessages(messages, encodingContext);
             if (notifications.Count() == 0) {
                 yield break;
             }
-            var encodingContext = messages.First().ServiceMessageContext;
             foreach (var networkMessage in notifications) {
                 var writer = new StringWriter();
                 var encoder = new JsonEncoderEx(writer, encodingContext) {
@@ -161,9 +167,17 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         /// Produce network messages from the data set message model
         /// </summary>
         /// <param name="messages"></param>
+        /// <param name="context"></param>
         /// <returns></returns>
         private IEnumerable<NetworkMessage> GetNetworkMessages(
-            IEnumerable<DataSetMessageModel> messages) {
+            IEnumerable<DataSetMessageModel> messages, ServiceMessageContext context) {
+            if (context?.NamespaceUris == null) {
+                // declare all notifications in messages dropped
+                foreach (var message in messages) {
+                    NotificationsDroppedCount += (uint)(message?.Notifications?.Count() ?? 0);
+                }
+                yield break;
+            }
 
             // TODO: Honor single message
             // TODO: Group by writer
@@ -183,7 +197,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                         .Select(q => q.Any() ? q.Dequeue() : null)
                             .Where(s => s != null)
                                 .ToDictionary(
-                                    s => s.NodeId.ToExpandedNodeId(message.ServiceMessageContext.NamespaceUris)
+                                    s => s.NodeId.ToExpandedNodeId(context.NamespaceUris)
                                         .AsString(message.ServiceMessageContext),
                                     s => s.Value);
                     var dataSetMessage = new DataSetMessage {

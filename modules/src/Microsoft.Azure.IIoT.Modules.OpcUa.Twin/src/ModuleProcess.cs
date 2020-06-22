@@ -86,6 +86,7 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Twin {
                     _reset = new TaskCompletionSource<bool>();
                     var module = hostScope.Resolve<IModuleHost>();
                     var identity = hostScope.Resolve<IIdentity>();
+                    var client = hostScope.Resolve<IClientHost>();
                     var logger = hostScope.Resolve<ILogger>();
                     var config = new Config(_config);
                     IMetricServer server = null;
@@ -100,6 +101,7 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Twin {
                         }
                         kTwinModuleStart.WithLabels(
                             identity.DeviceId ?? "", identity.ModuleId ?? "").Inc();
+                        await client.InitializeAsync();
                         OnRunning?.Invoke(this, true);
                         await Task.WhenAny(_reset.Task, _exit.Task);
                         if (_exit.Task.IsCompleted) {

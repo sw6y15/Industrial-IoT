@@ -10,6 +10,7 @@ namespace Microsoft.Azure.IIoT.App.Services {
     using Microsoft.Azure.IIoT.OpcUa.Api.Twin.Models;
     using Microsoft.Azure.IIoT.OpcUa.Api.Core.Models;
     using Microsoft.Azure.IIoT.Serializers;
+    using Microsoft.Azure.IIoT.App.Common;
     using System;
     using System.Threading.Tasks;
     using Serilog;
@@ -25,10 +26,11 @@ namespace Microsoft.Azure.IIoT.App.Services {
         /// <param name="publisherService"></param>
         /// <param name="serializer"></param>
         /// <param name="logger"></param>
-        public Publisher(ITwinServiceApi publisherService, IJsonSerializer serializer, ILogger logger) {
+        public Publisher(ITwinServiceApi twinService, IJsonSerializer serializer, ILogger logger, UICommon commonHelper) {
             _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
-            _twin = publisherService ?? throw new ArgumentNullException(nameof(publisherService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _commonHelper = commonHelper ?? throw new ArgumentNullException(nameof(commonHelper));
+            _twinService = twinService ?? throw new ArgumentNullException(nameof(twinService));
         }
 
         /// <summary>
@@ -36,17 +38,26 @@ namespace Microsoft.Azure.IIoT.App.Services {
         /// </summary>
         /// <param name="endpointId"></param>
         /// <returns>PublishedNode</returns>
-        public async Task<PagedResult<PublishedItemApiModel>> PublishedAsync(string endpointId) {
-            var pageResult = new PagedResult<PublishedItemApiModel>();
+        public async Task<PagedResult<ListNode>> PublishedAsync(string endpointId, bool readValues, CredentialModel credential = null) {
+            var pageResult = new PagedResult<ListNode>();
+            var model = new ValueReadRequestApiModel();
+
             try {
                 var continuationToken = string.Empty;
                 do {
-                    var result = await _twin.NodePublishListAsync(endpointId, continuationToken);
+                    var result = await _twinService.NodePublishListAsync(endpointId, continuationToken);
                     continuationToken = result.ContinuationToken;
 
                     if (result.Items != null) {
                         foreach (var item in result.Items) {
-                            pageResult.Results.Add(item);
+                            model.NodeId = item.NodeId;
+                            model.Header = Elevate(new RequestHeaderApiModel(), credential);
+                            var readResponse = readValues ? await _twinService.NodeValueReadAsync(endpointId, model) : null;
+                            pageResult.Results.Add(new ListNode {
+                                PublishedItem = item,
+                                Value = readResponse?.Value?.ToJson()?.TrimQuotes(),
+                                DataType = readResponse ?.DataType
+                            });
                         }
                     }
                 } while (!string.IsNullOrEmpty(continuationToken));
@@ -60,7 +71,7 @@ namespace Microsoft.Azure.IIoT.App.Services {
                 var errorMessage = string.Format(e.Message, e.InnerException?.Message ?? "--", e?.StackTrace ?? "--");
                 pageResult.Error = errorMessage;
             }
-            pageResult.PageSize = 10;
+            pageResult.PageSize = _commonHelper.PageLength;
             pageResult.RowCount = pageResult.Results.Count;
             pageResult.PageCount = (int)Math.Ceiling((decimal)pageResult.RowCount / pageResult.PageSize);
             return pageResult;
@@ -82,7 +93,6 @@ namespace Microsoft.Azure.IIoT.App.Services {
                 var requestApiModel = new PublishStartRequestApiModel() {
                     Item = new PublishedItemApiModel() {
                         NodeId = nodeId,
-                        DisplayName = displayName,
                         SamplingInterval = samplingInterval,
                         PublishingInterval = publishingInterval,
                         HeartbeatInterval = heartBeatInterval
@@ -91,7 +101,7 @@ namespace Microsoft.Azure.IIoT.App.Services {
 
                 requestApiModel.Header = Elevate(new RequestHeaderApiModel(), credential);
 
-                var resultApiModel = await _twin.NodePublishStartAsync(endpointId, requestApiModel);
+                var resultApiModel = await _twinService.NodePublishStartAsync(endpointId, requestApiModel);
                 return resultApiModel.ErrorInfo == null;
             }
             catch (Exception e) {
@@ -113,7 +123,7 @@ namespace Microsoft.Azure.IIoT.App.Services {
                 };
                 requestApiModel.Header = Elevate(new RequestHeaderApiModel(), credential);
 
-                var resultApiModel = await _twin.NodePublishStopAsync(endpointId, requestApiModel);
+                var resultApiModel = await _twinService.NodePublishStopAsync(endpointId, requestApiModel);
                 return resultApiModel.ErrorInfo == null;
             }
             catch (Exception e) {
@@ -144,7 +154,8 @@ namespace Microsoft.Azure.IIoT.App.Services {
         }
 
         private readonly IJsonSerializer _serializer;
-        private readonly ITwinServiceApi _twin;
+        private readonly ITwinServiceApi _twinService;
         private readonly ILogger _logger;
+        private readonly UICommon _commonHelper;
     }
 }

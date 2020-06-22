@@ -32,6 +32,7 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher {
                 .AddLegacyPublisherCommandLine(args)
                 .AddCommandLine(args)
                 .Build();
+
 #if DEBUG
             if (args.Any(a => a.ToLowerInvariant().Contains("wfd") ||
                     a.ToLowerInvariant().Contains("waitfordebugger"))) {

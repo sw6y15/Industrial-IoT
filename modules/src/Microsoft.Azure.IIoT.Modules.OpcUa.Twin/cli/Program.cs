@@ -15,13 +15,13 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Twin.Cli {
     using Microsoft.Azure.IIoT.Exceptions;
     using Microsoft.Azure.IIoT.Utils;
     using Microsoft.Extensions.Configuration;
+    using Opc.Ua;
     using Serilog;
     using Serilog.Events;
     using System;
     using System.Collections.Generic;
     using System.Diagnostics.Tracing;
     using System.Linq;
-    using System.Net;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -167,7 +167,7 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Twin.Cli {
                     case Op.Add:
                     case Op.Host:
                         if (deviceId == null) {
-                            deviceId = Dns.GetHostName();
+                            deviceId = Utils.GetHostName();
                             Console.WriteLine($"Using <deviceId> '{deviceId}'");
                         }
                         if (moduleId == null) {

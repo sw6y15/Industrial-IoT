@@ -45,11 +45,14 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         public IEnumerable<NetworkMessageModel> EncodeBatch(
             IEnumerable<DataSetMessageModel> messages, int maxMessageSize) {
 
-            var notifications = GetMonitoredItemMessages(messages);
+            // by design all messages are generated in the same session context,
+            // therefore it is safe to get the first message's context
+            var encodingContext = messages.FirstOrDefault(m => m.ServiceMessageContext != null)
+                ?.ServiceMessageContext;
+            var notifications = GetMonitoredItemMessages(messages, encodingContext);
             if (notifications.Count() == 0) {
                 yield break;
             }
-            var encodingContext = messages.First().ServiceMessageContext;
             var current = notifications.GetEnumerator();
             var processing = current.MoveNext();
             var messageSize = 2; // array brackets
@@ -92,7 +95,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                         UseUriEncoding = true,
                         UseReversibleEncoding = false
                     };
-                    foreach(var element in chunk) { 
+                    foreach(var element in chunk) {
                         encoder.WriteEncodeable(null, element);
                     }
                     encoder.Close();
@@ -119,11 +122,14 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         public IEnumerable<NetworkMessageModel> Encode(
             IEnumerable<DataSetMessageModel> messages, int maxMessageSize) {
 
-            var notifications = GetMonitoredItemMessages(messages);
+            // by design all messages are generated in the same session context,
+            // therefore it is safe to get the first message's context
+            var encodingContext = messages.FirstOrDefault(m => m.ServiceMessageContext != null)
+                ?.ServiceMessageContext;
+            var notifications = GetMonitoredItemMessages(messages, encodingContext);
             if (notifications.Count() == 0) {
                 yield break;
             }
-            var encodingContext = messages.First().ServiceMessageContext;
             foreach (var networkMessage in notifications) {
                 var writer = new StringWriter();
                 var encoder = new JsonEncoderEx(writer, encodingContext) {
@@ -160,8 +166,16 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         /// Produce Monitored Item Messages from the data set message model
         /// </summary>
         /// <param name="messages"></param>
+        /// <param name="context"></param>
         private IEnumerable<MonitoredItemMessage> GetMonitoredItemMessages(
-            IEnumerable<DataSetMessageModel> messages) {
+            IEnumerable<DataSetMessageModel> messages, ServiceMessageContext context) {
+            if (context?.NamespaceUris == null) {
+                // declare all notifications in messages dropped
+                foreach (var message in messages) {
+                    NotificationsDroppedCount += (uint)(message?.Notifications?.Count() ?? 0);
+                }
+                yield break;
+            }
             foreach (var message in messages) {
                 foreach (var notification in message.Notifications) {
                     var result = new MonitoredItemMessage {
@@ -171,7 +185,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                         ApplicationUri = message.ApplicationUri,
                         EndpointUrl = message.EndpointUrl,
                         ExtensionFields = message.Writer?.DataSet?.ExtensionFields,
-                        NodeId = notification.NodeId.ToExpandedNodeId(message.ServiceMessageContext.NamespaceUris),
+                        NodeId = notification.NodeId.ToExpandedNodeId(context.NamespaceUris),
                         Timestamp = message.TimeStamp ?? DateTime.UtcNow,
                         Value = notification.Value,
                         DisplayName = notification.DisplayName,

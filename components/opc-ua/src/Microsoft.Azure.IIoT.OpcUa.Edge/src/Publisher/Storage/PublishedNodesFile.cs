@@ -6,6 +6,7 @@
 namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
     using Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Models;
     using Microsoft.Azure.IIoT.OpcUa.Publisher.Models;
+    using Microsoft.Azure.IIoT.OpcUa.Protocol.Models;
     using Microsoft.Azure.IIoT.OpcUa.Core.Models;
     using Microsoft.Azure.IIoT.Crypto;
     using Microsoft.Azure.IIoT.Serializers;
@@ -321,9 +322,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                     if (string.IsNullOrEmpty(node.Id)) {
                         node.Id = node.ExpandedNodeId;
                     }
-                    if (string.IsNullOrEmpty(node.DisplayName)) {
-                        node.DisplayName = node.Id;
-                    }
                     if (scaleTestCount == 1) {
                         yield return node;
                     }
@@ -331,7 +329,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                         for (var i = 0; i < scaleTestCount; i++) {
                             yield return new OpcNodeModel {
                                 Id = node.Id,
-                                DisplayName = $"{node.DisplayName}_{i}",
+                                DisplayName = string.IsNullOrEmpty(node.DisplayName) ?
+                                    $"{node.Id}_{i}" : $"{node.DisplayName}_{i}",
                                 ExpandedNodeId = node.ExpandedNodeId,
                                 HeartbeatInterval = node.HeartbeatInterval,
                                 HeartbeatIntervalTimespan = node.HeartbeatIntervalTimespan,

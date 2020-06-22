@@ -20,6 +20,7 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Cli {
     using Microsoft.Azure.IIoT.Serializers.NewtonSoft;
     using Microsoft.Azure.IIoT.Serializers;
     using Microsoft.Extensions.Configuration;
+    using Opc.Ua;
     using Serilog;
     using Serilog.Events;
     using System;
@@ -40,7 +41,7 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Cli {
         /// Entry point
         /// </summary>
         public static void Main(string[] args) {
-            var checkTrust = false;
+            var checkTrust = true;
             var legacyTest = false;
             var withServer = false;
             var verbose = false;
@@ -116,7 +117,7 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Cli {
                 config = connectionString.ToIoTHubConfig();
 
                 if (deviceId == null) {
-                    deviceId = Dns.GetHostName();
+                    deviceId = Utils.GetHostName();
                     Console.WriteLine($"Using <deviceId> '{deviceId}'");
                 }
                 if (moduleId == null) {
@@ -246,7 +247,7 @@ Options:
 
                     // Start publisher module
                     var host = Task.Run(() => HostAsync(config, diagnostics, logger, deviceId,
-                        moduleId, arguments.ToArray(), verbose, true), cts.Token);
+                        moduleId, arguments.ToArray(), verbose, false), cts.Token);
 
                     Console.WriteLine("Press key to cancel...");
                     Console.ReadKey();
@@ -327,7 +328,7 @@ Options:
             public ServerWrapper(ILogger logger) {
                 _cts = new CancellationTokenSource();
                 _server = RunSampleServerAsync(_cts.Token, logger);
-                EndpointUrl = "opc.tcp://" + Dns.GetHostName() +
+                EndpointUrl = "opc.tcp://" + Utils.GetHostName() +
                     ":51210/UA/SampleServer";
             }
 

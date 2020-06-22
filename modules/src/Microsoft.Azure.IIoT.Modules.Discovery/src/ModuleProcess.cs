@@ -6,6 +6,7 @@
 namespace Microsoft.Azure.IIoT.Modules.Discovery {
     using Microsoft.Azure.IIoT.Modules.Discovery.Runtime;
     using Microsoft.Azure.IIoT.Modules.Discovery.Controllers;
+    using Microsoft.Azure.IIoT.OpcUa.Protocol;
     using Microsoft.Azure.IIoT.OpcUa.Protocol.Services;
     using Microsoft.Azure.IIoT.OpcUa.Edge.Discovery.Services;
     using Microsoft.Azure.IIoT.Module;
@@ -81,16 +82,17 @@ namespace Microsoft.Azure.IIoT.Modules.Discovery {
                     _reset = new TaskCompletionSource<bool>();
                     var module = hostScope.Resolve<IModuleHost>();
                     var identity = hostScope.Resolve<IIdentity>();
+                    var client = hostScope.Resolve<IClientHost>();
                     var logger = hostScope.Resolve<ILogger>();
                     var config = new Config(_config);
                     IMetricServer server = null;
                     try {
                         // Start module
                         var version = GetType().Assembly.GetReleaseVersion().ToString();
-                        logger.Information("Starting module OpcDiscovery version {version}.",
-                            version);
+                        logger.Information("Starting module OpcDiscovery version {version}.", version);
                         await module.StartAsync(IdentityType.Discoverer,
                             "OpcDiscovery", version, this);
+                        await client.InitializeAsync();
                         kDiscoveryModuleStart.WithLabels(
                             identity.DeviceId ?? "", identity.ModuleId ?? "").Inc();
                         if (hostScope.TryResolve(out server)) {

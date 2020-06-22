@@ -5,9 +5,9 @@
 
 namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher.Edge {
     using Microsoft.Azure.IIoT.Services.OpcUa.Publisher.Edge.Runtime;
+    using Microsoft.Azure.IIoT.OpcUa.Api.Registry.Clients;
     using Microsoft.Azure.IIoT.OpcUa.Publisher;
     using Microsoft.Azure.IIoT.OpcUa.Publisher.Services;
-    using Microsoft.Azure.IIoT.OpcUa.Api.Registry.Clients;
     using Microsoft.Azure.IIoT.OpcUa.Protocol.Services;
     using Microsoft.Azure.IIoT.AspNetCore.Storage;
     using Microsoft.Azure.IIoT.AspNetCore.Cors;
@@ -15,11 +15,13 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher.Edge {
     using Microsoft.Azure.IIoT.AspNetCore.Auth;
     using Microsoft.Azure.IIoT.AspNetCore.Auth.Clients;
     using Microsoft.Azure.IIoT.Hub.Client;
+    using Microsoft.Azure.IIoT.Diagnostics.AppInsights.Default;
     using Microsoft.Azure.IIoT.Http.Default;
     using Microsoft.Azure.IIoT.Http.Ssl;
     using Microsoft.Azure.IIoT.Serializers;
-    using Microsoft.Azure.IIoT.Utils;
     using Microsoft.Azure.IIoT.Storage.CosmosDb.Services;
+    using Microsoft.Azure.IIoT.Utils;
+    using Microsoft.ApplicationInsights.Extensibility;
     using Microsoft.AspNetCore.Authentication;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
@@ -29,8 +31,8 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher.Edge {
     using Microsoft.Extensions.Logging;
     using Microsoft.OpenApi.Models;
     using Autofac;
-    using Prometheus;
     using Autofac.Extensions.DependencyInjection;
+    using Prometheus;
     using System;
     using ILogger = Serilog.ILogger;
 
@@ -108,6 +110,10 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher.Edge {
             // Add controllers as services so they'll be resolved.
             services.AddControllers().AddSerializers();
             services.AddSwagger(ServiceInfo.Name, ServiceInfo.Description);
+
+            // Enable Application Insights telemetry collection.
+            services.AddApplicationInsightsTelemetry(Config.InstrumentationKey);
+            services.AddSingleton<ITelemetryInitializer, ApplicationInsightsTelemetryInitializer>();
         }
 
         /// <summary>

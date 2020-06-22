@@ -6,7 +6,6 @@
 namespace Microsoft.Azure.IIoT.OpcUa.Protocol {
     using Microsoft.Azure.IIoT.OpcUa.Core.Models;
     using System.Threading.Tasks;
-    using Opc.Ua;
     using Opc.Ua.Client;
 
     /// <summary>
@@ -20,14 +19,19 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol {
         int SessionCount { get; }
 
         /// <summary>
+        /// gets the number of retiries for a speciffic session
+        /// </summary>
+        /// <param name="connection"></param>
+        /// <returns></returns>
+        int GetNumberOfConnectionRetries(ConnectionModel connection);
+
+        /// <summary>
         /// Get or create session for subscription
         /// </summary>
         /// <param name="connection"></param>
         /// <param name="createIfNotExists"></param>
-        /// <param name="statusCode"></param>
         /// <returns></returns>
-        Task<Session> GetOrCreateSessionAsync(ConnectionModel connection,
-            bool createIfNotExists, uint statusCode = StatusCodes.Good);
+        Session GetOrCreateSession(ConnectionModel connection, bool createIfNotExists);
 
         /// <summary>
         /// Remove session if empty
@@ -35,7 +39,26 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol {
         /// <param name="connection"></param>
         /// <param name="onlyIfEmpty"></param>
         /// <returns></returns>
-        Task RemoveSessionAsync(ConnectionModel connection,
-            bool onlyIfEmpty = true);
+        Task RemoveSessionAsync(ConnectionModel connection, bool onlyIfEmpty = true);
+
+        /// <summary>
+        /// Get or create a subscription
+        /// </summary>
+        /// <param name="subscription"></param>
+        /// <returns></returns>
+        void RegisterSubscription(ISubscription subscription);
+
+        /// <summary>
+        /// Removes a subscription
+        /// </summary>
+        /// <param name="subscription"></param>
+        /// <returns></returns>
+        void UnregisterSubscription(ISubscription subscription);
+
+        /// <summary>
+        /// stops all pending sessions
+        /// </summary>
+        /// <returns></returns>
+        Task StopAsync();
     }
 }

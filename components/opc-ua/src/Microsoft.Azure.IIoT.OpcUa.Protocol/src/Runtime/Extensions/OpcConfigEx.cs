@@ -38,12 +38,12 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol {
             }
 
             // wait with the configuration until network is up
-            for (var retry = 0; retry < 10; retry++) {
+            for (var retry = 0; retry < 3; retry++) {
                 if (NetworkInterface.GetIsNetworkAvailable()) {
                     break;
                 }
                 else {
-                    await Task.Delay(10000);
+                    await Task.Delay(3000);
                 }
             }
 
@@ -62,7 +62,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol {
                         //  try to resolve the hostname
                         var hostname = !string.IsNullOrWhiteSpace(identity?.Gateway) ?
                             identity.Gateway : !string.IsNullOrWhiteSpace(identity?.DeviceId) ?
-                                identity.DeviceId : Dns.GetHostName();
+                                identity.DeviceId : Utils.GetHostName();
                         var alternateBaseAddresses = new List<string>();
                         try {
                             alternateBaseAddresses.Add($"urn://{hostname}");
@@ -104,7 +104,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol {
                         await applicationConfiguration.CertificateValidator
                             .Update(applicationConfiguration.SecurityConfiguration);
                     },
-                    e => true, 20);
+                    e => true, 5);
             }
             catch (Exception e) {
                 throw new InvalidConfigurationException("OPC UA configuration not valid", e);

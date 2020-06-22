@@ -88,6 +88,7 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher {
                     _reset = new TaskCompletionSource<bool>();
                     var module = hostScope.Resolve<IModuleHost>();
                     var identity = hostScope.Resolve<IIdentity>();
+                    ISessionManager sessionManager = null;
                     var logger = hostScope.Resolve<ILogger>();
                     var config = new Config(_config);
                     IMetricServer server = null;
@@ -102,6 +103,7 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher {
                         }
                         kPublisherModuleStart.WithLabels(
                             identity.DeviceId ?? "", identity.ModuleId ?? "").Inc();
+                        sessionManager = hostScope.Resolve<ISessionManager>();
                         OnRunning?.Invoke(this, true);
                         await Task.WhenAny(_reset.Task, _exit.Task);
                         if (_exit.Task.IsCompleted) {
@@ -120,8 +122,11 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher {
                         if (server != null) {
                             await server.StopAsync();
                         }
+                        await sessionManager?.StopAsync();
                         await module.StopAsync();
                         OnRunning?.Invoke(this, false);
+                        kPublisherModuleStart.WithLabels(
+                            identity.DeviceId ?? "", identity.ModuleId ?? "").Set(0);
                     }
                 }
             }

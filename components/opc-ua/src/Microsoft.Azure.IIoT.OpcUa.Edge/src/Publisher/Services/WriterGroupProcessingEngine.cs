@@ -22,6 +22,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
     using System.Collections.Generic;
     using System.Collections.Concurrent;
     using System.Globalization;
+    using Antlr4.Runtime.Misc;
 
     /// <summary>
     /// Writer group processing engine
@@ -272,7 +273,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
 
                 // Encoder
                 _encodingBlock = new TransformManyBlock<DataSetMessageModel[], NetworkMessageModel>(
-                    _outer.EncodeMessages,
+                    EncodeAsync,
                     new ExecutionDataflowBlockOptions {
                         SingleProducerConstrained = true,
                         EnsureOrdered = true,
@@ -299,11 +300,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
 
             /// <inheritdoc/>
             public void SetBatchTriggerInterval(TimeSpan? value) {
-                if (value == null) {
+                _batchTriggerInterval = value;
+                if (_batchTriggerInterval == null || _batchTriggerInterval.Value == TimeSpan.Zero) {
                     _batchTriggerIntervalTimer.Change(Timeout.Infinite, Timeout.Infinite);
-                }
-                else {
-                    _batchTriggerIntervalTimer.Change(value.Value, value.Value);
                 }
             }
 
@@ -340,6 +339,18 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             }
 
             /// <summary>
+            /// Encode messages
+            /// </summary>
+            /// <param name="messages"></param>
+            /// <returns></returns>
+            private IEnumerable<NetworkMessageModel> EncodeAsync(DataSetMessageModel[] messages) {
+                if (_batchTriggerInterval != null && _batchTriggerInterval.Value > TimeSpan.Zero) {
+                    _batchTriggerIntervalTimer.Change(_batchTriggerInterval.Value, Timeout.InfiniteTimeSpan);
+                }
+                return _outer.EncodeMessages(messages);
+            }
+
+            /// <summary>
             /// Send messages
             /// </summary>
             /// <param name="message"></param>
@@ -371,7 +382,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             private readonly ActionBlock<NetworkMessageModel> _sinkBlock;
             private readonly string _iotHubMessageSinkGuid = Guid.NewGuid().ToString();
             private long _sentCompleteCount;
-
+            private TimeSpan? _batchTriggerInterval;
             private readonly string _iotHubMessageSinkStartTime =
                 DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss.FFFFFFFK", CultureInfo.InvariantCulture);
             private static readonly Histogram kSendingDuration = Metrics.CreateHistogram(
@@ -447,7 +458,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                 sc.OnSubscriptionStatusChange += OnSubscriptionStatusAsync;
 
                 await sc.ApplyAsync(_subscriptionInfo.MonitoredItems,
-                    _subscriptionInfo.Configuration, false);
+                    _subscriptionInfo.Configuration);
                 Subscription = sc;
             }
 
@@ -461,8 +472,11 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                     return;
                 }
 
-                await Subscription.ApplyAsync(_subscriptionInfo.MonitoredItems,
-                    _subscriptionInfo.Configuration, true);
+                // only try to activate if already enabled. Otherwise the activation
+                // will be handled by the session's keep alive mechanism
+                if (Subscription.Enabled) {
+                    await Subscription.ActivateAsync(null).ConfigureAwait(false);
+                }
 
                 if (_keyframeTimer != null) {
                     _keyframeTimer.Start();
@@ -484,8 +498,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                     return;
                 }
 
-                await Subscription.ApplyAsync(_subscriptionInfo.MonitoredItems,
-                    _subscriptionInfo.Configuration, false);
+                await Subscription.CloseAsync().ConfigureAwait(false);
 
                 if (_keyframeTimer != null) {
                     _keyframeTimer.Stop();
@@ -499,7 +512,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             /// <inheritdoc/>
             public void Dispose() {
                 if (Subscription != null) {
-                    Subscription.ApplyAsync(null, _subscriptionInfo.Configuration, false);
 
                     Subscription.OnSubscriptionNotification -= OnSubscriptionChangedAsync;
                     Subscription.OnMonitoredItemStatusChange -= OnMonitoredItemStatusAsync;

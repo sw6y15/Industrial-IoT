@@ -6,18 +6,14 @@
 namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services.Tests {
     using Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services;
     using Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Models;
-    using Microsoft.Azure.IIoT.OpcUa.Publisher.Models;
     using Microsoft.Azure.IIoT.Diagnostics;
     using Microsoft.Azure.IIoT.Serializers.NewtonSoft;
     using Microsoft.Azure.IIoT.Serializers;
-    using Microsoft.Azure.IIoT.Module;
+    using Xunit;
     using System.IO;
     using System.Linq;
     using System.Text;
-    using Xunit;
     using System;
-    using System.Net;
-    using System.Collections.Generic;
 
     /// <summary>
     /// Test
