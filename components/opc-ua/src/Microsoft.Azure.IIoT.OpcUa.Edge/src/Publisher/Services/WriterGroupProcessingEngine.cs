@@ -22,7 +22,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
     using System.Collections.Generic;
     using System.Collections.Concurrent;
     using System.Globalization;
-    using Antlr4.Runtime.Misc;
 
     /// <summary>
     /// Writer group processing engine

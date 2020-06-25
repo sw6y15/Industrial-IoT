@@ -279,7 +279,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Twin.Services {
                 throw new AssertActualExpectedException(null, q, "Query");
             })) {
 
-                IPublishServices<string> service = mock.Create<PublisherJobService>();
+                IPublishServices service = mock.Create<PublisherAdapter>();
 
                 // Run
                 var result = await service.NodePublishStartAsync("endpoint1", new PublishStartRequestModel {
@@ -345,7 +345,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Twin.Services {
                 throw new AssertActualExpectedException(null, q, "Query");
             })) {
 
-                IPublishServices<string> service = mock.Create<PublisherJobService>();
+                IPublishServices service = mock.Create<PublisherAdapter>();
 
                 // Run
                 var result1 = await service.NodePublishStartAsync("endpoint1", new PublishStartRequestModel {

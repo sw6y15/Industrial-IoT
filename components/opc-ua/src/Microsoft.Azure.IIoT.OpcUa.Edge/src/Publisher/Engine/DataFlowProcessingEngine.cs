@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Engine {
+#if FALSE
     using Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Models;
     using Microsoft.Azure.IIoT.OpcUa.Publisher;
     using Microsoft.Azure.IIoT.Agent.Framework;
@@ -19,7 +20,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Engine {
     using System.Threading.Tasks.Dataflow;
     using Prometheus;
     using System.Text;
-
     /// <summary>
     /// Dataflow engine
     /// </summary>
@@ -350,4 +350,5 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Engine {
             "iiot_edge_publisher_estimated_messages_per_day",
             "Estimated IoT Hub messages charged per day", kGaugeConfig);
     }
+#endif
 }
