@@ -42,7 +42,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Events.Api {
             })) {
 
                 await bus.PublishAsync(expected);
-                await Task.WhenAny(result.Task, Task.Delay(1000));
+                await Task.WhenAny(result.Task, Task.Delay(5000));
 
                 Assert.True(result.Task.IsCompleted);
                 var received = result.Task.Result;
@@ -80,7 +80,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Events.Api {
                     await bus.PublishAsync(expected);
                 }
 
-                await Task.WhenAny(result.Task, Task.Delay(1000));
+                await Task.WhenAny(result.Task, Task.Delay(5000));
                 Assert.True(result.Task.IsCompleted);
             }
         }
@@ -108,7 +108,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Events.Api {
             })) {
 
                 await bus.PublishAsync(expected);
-                await Task.WhenAny(result.Task, Task.Delay(1000));
+                await Task.WhenAny(result.Task, Task.Delay(5000));
 
                 Assert.True(result.Task.IsCompleted);
                 var received = result.Task.Result;
@@ -149,7 +149,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Events.Api {
                     await bus.PublishAsync(expected);
                 }
 
-                await Task.WhenAny(result.Task, Task.Delay(1000));
+                await Task.WhenAny(result.Task, Task.Delay(5000));
                 Assert.True(result.Task.IsCompleted);
             }
         }
@@ -174,7 +174,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Events.Api {
             })) {
 
                 await bus.PublishAsync(expected);
-                await Task.WhenAny(result.Task, Task.Delay(1000));
+                await Task.WhenAny(result.Task, Task.Delay(5000));
 
                 Assert.True(result.Task.IsCompleted);
                 var received = result.Task.Result;
@@ -213,7 +213,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Events.Api {
                     await bus.PublishAsync(expected);
                 }
 
-                await Task.WhenAny(result.Task, Task.Delay(1000));
+                await Task.WhenAny(result.Task, Task.Delay(5000));
                 Assert.True(result.Task.IsCompleted);
             }
         }
@@ -240,7 +240,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Events.Api {
             })) {
 
                 await bus.PublishAsync(expected);
-                await Task.WhenAny(result.Task, Task.Delay(1000));
+                await Task.WhenAny(result.Task, Task.Delay(5000));
 
                 Assert.True(result.Task.IsCompleted);
                 var received = result.Task.Result;
@@ -285,7 +285,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Events.Api {
                     await bus.PublishAsync(expected);
                 }
 
-                await Task.WhenAny(result.Task, Task.Delay(1000));
+                await Task.WhenAny(result.Task, Task.Delay(5000));
                 Assert.True(result.Task.IsCompleted);
             }
         }
@@ -310,7 +310,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Events.Api {
             })) {
 
                 await bus.PublishAsync(expected);
-                await Task.WhenAny(result.Task, Task.Delay(1000));
+                await Task.WhenAny(result.Task, Task.Delay(5000));
 
                 Assert.True(result.Task.IsCompleted);
                 var received = result.Task.Result;
@@ -352,7 +352,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Events.Api {
                     await bus.PublishAsync(expected);
                 }
 
-                await Task.WhenAny(result.Task, Task.Delay(1000));
+                await Task.WhenAny(result.Task, Task.Delay(5000));
                 Assert.True(result.Task.IsCompleted);
             }
         }
@@ -376,7 +376,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Events.Api {
             })) {
 
                 await bus.PublishAsync(expected);
-                await Task.WhenAny(result.Task, Task.Delay(1000));
+                await Task.WhenAny(result.Task, Task.Delay(5000));
 
                 Assert.True(result.Task.IsCompleted);
                 var received = result.Task.Result;
@@ -414,7 +414,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Events.Api {
                     await bus.PublishAsync(expected);
                 }
 
-                await Task.WhenAny(result.Task, Task.Delay(1000));
+                await Task.WhenAny(result.Task, Task.Delay(5000));
                 Assert.True(result.Task.IsCompleted);
             }
         }
@@ -441,7 +441,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Events.Api {
                 })) {
 
                 await bus.PublishAsync(expected);
-                await Task.WhenAny(result.Task, Task.Delay(1000));
+                await Task.WhenAny(result.Task, Task.Delay(5000));
 
                 Assert.True(result.Task.IsCompleted);
                 var received = result.Task.Result;
@@ -483,7 +483,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Events.Api {
                 })) {
 
                 await bus.PublishAsync(expected);
-                await Task.WhenAny(result.Task, Task.Delay(1000));
+                await Task.WhenAny(result.Task, Task.Delay(5000));
 
                 Assert.True(result.Task.IsCompleted);
                 var received = result.Task.Result;
@@ -528,7 +528,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Events.Api {
                     await bus.PublishAsync(expected);
                 }
 
-                await Task.WhenAny(result.Task, Task.Delay(1000));
+                await Task.WhenAny(result.Task, Task.Delay(5000));
                 Assert.True(result.Task.IsCompleted);
             }
         }

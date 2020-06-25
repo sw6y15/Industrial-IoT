@@ -113,7 +113,7 @@ namespace Microsoft.Azure.IIoT.Deployment.Infrastructure {
                     Value = ServiceMode.Serverless.Value
                 };
 
-                var signalRCreateParameters = new SignalRCreateParameters() {
+                var signalRCreateParameters = new SignalRResource() {
                     Location = resourceGroup.RegionName,
                     Tags = tags,
 
@@ -122,11 +122,9 @@ namespace Microsoft.Azure.IIoT.Deployment.Infrastructure {
                         Tier = "Standard",
                         Capacity = 1,
                     },
-                    Properties = new SignalRCreateOrUpdateProperties {
-                        HostNamePrefix = signalRName,
-                        Features = new List<SignalRFeature> {
-                           serviceModeFeature
-                        }
+                    HostNamePrefix = signalRName,
+                    Features = new List<SignalRFeature> {
+                        serviceModeFeature
                     }
                 };
 
@@ -323,7 +321,7 @@ namespace Microsoft.Azure.IIoT.Deployment.Infrastructure {
 
             var errorMessage = $"Failed to generate unique SignalR service name " +
                 $"after {NUM_OF_MAX_NAME_AVAILABILITY_CHECKS} retries";
-            
+
             Log.Error(errorMessage);
             throw new Exception(errorMessage);
         }
