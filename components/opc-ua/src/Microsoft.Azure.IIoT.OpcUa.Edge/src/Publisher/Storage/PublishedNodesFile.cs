@@ -210,8 +210,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                         OperationTimeout = legacyCliModel.OperationTimeout,
                         Endpoint = new EndpointModel {
                             Url = item.EndpointUrl.OriginalString,
-                            SecurityMode = item.UseSecurity == false ?
-                                        SecurityMode.None : SecurityMode.Best
+                            SecurityMode = item.UseSecurity == false &&
+                                item.OpcAuthenticationMode != OpcAuthenticationMode.UsernamePassword ?
+                                    SecurityMode.None : SecurityMode.Best
                         },
                         User = item.OpcAuthenticationMode != OpcAuthenticationMode.UsernamePassword ?
                                 null : ToUserNamePasswordCredentialAsync(item).Result

@@ -39,13 +39,20 @@
                         @publisher.Id
                     </div>
                 </td>
-                @{string syncStatus = publisher.OutOfSync == null ? CommonHelper.None : publisher.OutOfSync == true ? "Out Of Sync" : "Synced";}
                 <td class="hover-text width-small">
                     <div>
-                        @syncStatus
+                        @(publisher.OutOfSync == null
+                            ? CommonHelper.None
+                            : publisher.OutOfSync == true
+                                ? "Out Of Sync"
+                                : "Synced")
                     </div>
                 </td>
-                @{string connectStatus = publisher.Connected == null ? CommonHelper.None : publisher.Connected == true ? "Connected" : "Disconnected";}
+                @{string connectStatus = publisher.Connected == null
+                    ? CommonHelper.None
+                    : publisher.Connected == true
+                        ? "Connected"
+                        : "Disconnected";}
                 <td class="hover-text width-small">
                     <div>
                         @{

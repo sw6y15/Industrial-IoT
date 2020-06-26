@@ -130,7 +130,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
                 ct.ThrowIfCancellationRequested();
             }
             while (continuation != null);
-            _logger.Information("Identity Token update finished.");
+            _logger.Information("Job orchestrator url updated to {url} on all twins.", url);
         }
 
         private static readonly TimeSpan kDefaultInterval = TimeSpan.FromMinutes(1);
