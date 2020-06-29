@@ -14,8 +14,9 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher.Runtime {
     using Microsoft.Azure.IIoT.Hub.Client;
     using Microsoft.Azure.IIoT.Hub.Client.Runtime;
     using Microsoft.Azure.IIoT.Api.Runtime;
-    using Microsoft.Azure.IIoT.OpcUa.Api.Twin;
     using Microsoft.Azure.IIoT.OpcUa.Api.Registry;
+    using Microsoft.Azure.IIoT.Messaging.ServiceBus.Runtime;
+    using Microsoft.Azure.IIoT.Messaging.ServiceBus;
     using Microsoft.Azure.IIoT.Storage.CosmosDb;
     using Microsoft.Azure.IIoT.Storage.CosmosDb.Runtime;
     using Microsoft.Azure.IIoT.Storage;
@@ -30,7 +31,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher.Runtime {
     /// Common web service configuration aggregation
     /// </summary>
     public class Config : DiagnosticsConfig, IWebHostConfig, IIoTHubConfig,
-        ICorsConfig, IOpenApiConfig, IRoleConfig,
+        ICorsConfig, IOpenApiConfig, IRoleConfig, IServiceBusConfig,
         ICosmosDbConfig, IItemContainerConfig, IRegistryConfig,
         IForwardedHeadersConfig, IContainerRegistryConfig {
 
@@ -80,6 +81,9 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher.Runtime {
         public string DatabaseName => "iiot_opc";
 
         /// <inheritdoc/>
+        public string ServiceBusConnString => _sb.ServiceBusConnString;
+
+        /// <inheritdoc/>
         public string DockerServer => _cr.DockerServer;
         /// <inheritdoc/>
         public string DockerUser => _cr.DockerUser;
@@ -107,6 +111,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher.Runtime {
             _host = new WebHostConfig(configuration);
             _hub = new IoTHubConfig(configuration);
             _cors = new CorsConfig(configuration);
+            _sb = new ServiceBusConfig(configuration);
             _api = new ApiConfig(configuration);
             _cosmos = new CosmosDbConfig(configuration);
             _fh = new ForwardedHeadersConfig(configuration);
@@ -118,6 +123,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher.Runtime {
         private readonly WebHostConfig _host;
         private readonly CorsConfig _cors;
         private readonly ApiConfig _api;
+        private readonly ServiceBusConfig _sb;
         private readonly CosmosDbConfig _cosmos;
         private readonly IoTHubConfig _hub;
         private readonly ForwardedHeadersConfig _fh;

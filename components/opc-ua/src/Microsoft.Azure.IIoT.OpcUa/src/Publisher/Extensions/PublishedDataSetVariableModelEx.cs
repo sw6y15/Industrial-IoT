@@ -46,6 +46,41 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
         }
 
         /// <summary>
+        /// Assign variable from content of another variable
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="update"></param>
+        /// <returns></returns>
+        public static void Assign(this PublishedDataSetVariableModel model,
+            PublishedDataSetVariableModel update) {
+            if (update == null) {
+                return;
+            }
+            model.Id = update.Id;
+            model.GenerationId = update.GenerationId;
+            model.DiscardNew = update.DiscardNew;
+            model.Attribute = update.Attribute;
+            model.DataChangeFilter = update.DataChangeFilter;
+            model.DeadbandType = update.DeadbandType;
+            model.DeadbandValue = update.DeadbandValue;
+            model.IndexRange = update.IndexRange;
+            model.MetaDataProperties = update.MetaDataProperties?.ToList();
+            model.PublishedVariableNodeId = update.PublishedVariableNodeId;
+            model.PublishedVariableDisplayName = update.PublishedVariableDisplayName;
+            model.SamplingInterval = update.SamplingInterval;
+            model.SubstituteValue = update.SubstituteValue?.Copy();
+            model.QueueSize = update.QueueSize;
+            model.HeartbeatInterval = update.HeartbeatInterval;
+            model.BrowsePath = update.BrowsePath;
+            model.MonitoringMode = update.MonitoringMode;
+            model.Created = update.Created.Clone();
+            model.Updated = update.Updated.Clone();
+            model.TriggerId = update.TriggerId;
+            model.Order = update.Order;
+            model.State = null;
+        }
+
+        /// <summary>
         /// Get model from request
         /// </summary>
         /// <param name="model"></param>

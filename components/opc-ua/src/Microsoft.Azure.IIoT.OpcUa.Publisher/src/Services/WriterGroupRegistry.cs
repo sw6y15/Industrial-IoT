@@ -136,7 +136,37 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                 foreach (var variable in request.Variables) {
                     try {
                         var info = variable.AsDataSetVariable(context);
-                        var result = await _dataSets.AddDataSetVariableAsync(endpointId, info);
+                        //
+                        // Create a unique hash for the variable from node id
+                        // This is done so that the behavior is the same as the
+                        // old behavior where the actual unique id of a variable
+                        // is the node id, and all variables are also removed
+                        // by the single node id.  See unit tests.
+                        //
+                        info.Id = info.PublishedVariableNodeId.ToSha1Hash();
+                        PublishedDataSetVariableModel result;
+                        while (true) {
+                            try {
+                                result = await _dataSets.AddDataSetVariableAsync(
+                                    endpointId, info);
+                                // Added
+                                break;
+                            }
+                            catch (ConflictingResourceException) {
+                                // Already exists - update regardless of generation id
+                                try {
+                                    result = await _dataSets.UpdateDataSetVariableAsync(
+                                        endpointId, info.Id, existing => {
+                                            existing.Assign(info);
+                                            return Task.FromResult(true);
+                                        });
+                                    break;
+                                }
+                                catch (ResourceNotFoundException) {
+                                    continue;
+                                }
+                            }
+                        }
                         results.Add(new DataSetAddVariableResultModel {
                             GenerationId = result.GenerationId,
                             Id = result.Id
@@ -935,6 +965,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                             Name = $"Default Writer Group ({siteId})",
                             WriterGroupId = siteId,
                             SiteId = siteId,
+                            PublishingInterval = TimeSpan.FromSeconds(10),
+                            BatchSize = 50,
+                            MaxNetworkMessageSize = 0,
                             Created = context,
                             Updated = context,
                             MessageType = NetworkMessageType.Uadp
@@ -1007,7 +1040,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                                 User = user,
                                 SubscriptionSettings = publishingInterval == null ?
                                     null : new PublishedDataSetSourceSettingsModel {
-                                        PublishingInterval = publishingInterval
+                                        PublishingInterval = publishingInterval,
+                                        ResolveDisplayName = true
                                     }
                             },
                             DataSetWriterId = endpointId,

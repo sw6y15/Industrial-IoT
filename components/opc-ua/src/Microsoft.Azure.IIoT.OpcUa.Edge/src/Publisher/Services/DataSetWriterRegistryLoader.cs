@@ -42,18 +42,19 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             _trigger = new TaskTrigger(LoadAnyAsync);
             _state = new ConcurrentDictionary<string, string>();
             _writerIds = new ConcurrentDictionary<string, bool>();
+            _serviceEndpoint = _endpoint.ServiceEndpoint;
             endpoint.OnServiceEndpointUpdated += OnServiceEndpointUpdated;
         }
 
         /// <inheritdoc/>
         public void OnDataSetWriterChanged(string dataSetWriterId) {
-            _writerIds.AddOrUpdate(dataSetWriterId, true, (k, b) => true);
+            _writerIds.AddOrUpdate(dataSetWriterId, false, (k, b) => false);
             _trigger.Pull();
         }
 
         /// <inheritdoc/>
         public void OnDataSetWriterRemoved(string dataSetWriterId) {
-            _writerIds.AddOrUpdate(dataSetWriterId, false, (k, b) => false);
+            _writerIds.AddOrUpdate(dataSetWriterId, true, (k, b) => true);
             _trigger.Pull();
         }
 

@@ -98,6 +98,11 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Models {
         public string LogFilename { get; set; }
 
         /// <summary>
+        /// The transport mode.
+        /// </summary>
+        public string Transport { get; set; }
+
+        /// <summary>
         /// The EdgeHub connection string.
         /// </summary>
         public string EdgeHubConnectionString { get; set; }

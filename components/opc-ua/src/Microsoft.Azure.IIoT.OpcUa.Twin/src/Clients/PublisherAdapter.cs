@@ -9,7 +9,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Twin.Clients {
     using Microsoft.Azure.IIoT.OpcUa.Publisher.Models;
     using Microsoft.Azure.IIoT.OpcUa.Twin;
     using Microsoft.Azure.IIoT.OpcUa.Twin.Models;
-    using Microsoft.Azure.IIoT.Utils;
     using Prometheus;
     using Serilog;
     using System;
@@ -108,13 +107,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Twin.Clients {
                     new DataSetAddVariableBatchRequestModel {
                         DataSetPublishingInterval = publishingInterval,
                         User = request.Header?.Elevation,
-                        // TODO Engine = new EngineConfigurationModel {
-                        // TODO     BatchSize = 50,
-                        // TODO     BatchTriggerInterval = TimeSpan.FromSeconds(10),
-                        // TODO     DiagnosticsInterval = TimeSpan.FromSeconds(60),
-                        // TODO     MaxMessageSize = 0
-                        // TODO }
-                        // TODO ResolveDisplayName = true
                         Variables = request.NodesToAdd
                             .Select(n => new DataSetAddVariableRequestModel {
                                 PublishedVariableNodeId = n.NodeId,
@@ -179,18 +171,26 @@ namespace Microsoft.Azure.IIoT.OpcUa.Twin.Clients {
             if (request == null) {
                 throw new ArgumentNullException(nameof(request));
             }
-            var writer = await _writers.GetDataSetWriterAsync(endpointId);
-            var dataset = writer.DataSet?.DataSetSource?.PublishedVariables?.PublishedData;
-            return new PublishedItemListResultModel {
-                Items = dataset?.Select(d => new PublishedItemModel {
-                    DisplayName = d.PublishedVariableDisplayName,
-                    HeartbeatInterval = d.HeartbeatInterval,
-                    NodeId = d.PublishedVariableNodeId,
-                    SamplingInterval = d.SamplingInterval,
-                    PublishingInterval =
-                        writer.DataSet.DataSetSource.SubscriptionSettings?.PublishingInterval
-                }).ToList()
-            };
+            try {
+                var writer = await _writers.GetDataSetWriterAsync(endpointId);
+                var dataset = writer.DataSet?.DataSetSource?.PublishedVariables?.PublishedData;
+                return new PublishedItemListResultModel {
+                    Items = dataset?.Select(d => new PublishedItemModel {
+                        DisplayName = d.PublishedVariableDisplayName,
+                        HeartbeatInterval = d.HeartbeatInterval,
+                        NodeId = d.PublishedVariableNodeId,
+                        SamplingInterval = d.SamplingInterval,
+                        PublishingInterval =
+                            writer.DataSet.DataSetSource.SubscriptionSettings?.PublishingInterval
+                    }).ToList()
+                };
+            }
+            catch (ResourceNotFoundException) {
+                // Old behavior when none found return empty list
+                return new PublishedItemListResultModel {
+                    Items = new List<PublishedItemModel>()
+                };
+            }
         }
 
         private readonly IDataSetWriterRegistry _writers;

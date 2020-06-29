@@ -8,6 +8,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Twin.Services {
     using Microsoft.Azure.IIoT.OpcUa.Registry;
     using Microsoft.Azure.IIoT.OpcUa.Registry.Models;
     using Microsoft.Azure.IIoT.OpcUa.Core.Models;
+    using Microsoft.Azure.IIoT.OpcUa.Publisher.Services;
+    using Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default;
     using Microsoft.Azure.IIoT.OpcUa.Twin;
     using Microsoft.Azure.IIoT.OpcUa.Twin.Clients;
     using Microsoft.Azure.IIoT.Storage;
@@ -24,8 +26,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Twin.Services {
     using Xunit;
     using Xunit.Sdk;
     using Autofac;
-    using Microsoft.Azure.IIoT.OpcUa.Publisher.Services;
-    using Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default;
 
     public class PublisherAdapterTests {
 
@@ -193,18 +193,11 @@ namespace Microsoft.Azure.IIoT.OpcUa.Twin.Services {
                 // Assert
                 Assert.NotNull(list);
                 Assert.NotNull(result);
-                Assert.Collection(list.Items,
-                    a => {
-                        Assert.Equal("i=2258", a.NodeId);
-                        Assert.Equal(TimeSpan.FromSeconds(2), a.PublishingInterval);
-                        Assert.Equal(TimeSpan.FromSeconds(1), a.SamplingInterval);
-                    },
-                    b => {
-                        Assert.Equal("i=2258", b.NodeId);
-                        Assert.Equal(TimeSpan.FromSeconds(2), b.PublishingInterval);
-                        Assert.Equal(TimeSpan.FromSeconds(1), b.SamplingInterval);
-                    });
+                Assert.Single(list.Items);
                 Assert.Null(list.ContinuationToken);
+                Assert.Equal("i=2258", list.Items.Single().NodeId);
+                Assert.Equal(TimeSpan.FromSeconds(2), list.Items.Single().PublishingInterval);
+                Assert.Equal(TimeSpan.FromSeconds(1), list.Items.Single().SamplingInterval);
             }
         }
 
@@ -422,18 +415,11 @@ namespace Microsoft.Azure.IIoT.OpcUa.Twin.Services {
                 // Assert
                 Assert.NotNull(list);
                 Assert.NotNull(result);
-                Assert.Collection(list.Items,
-                    a => {
-                        Assert.Equal("i=2258", a.NodeId);
-                        Assert.Equal(TimeSpan.FromSeconds(3), a.PublishingInterval);
-                        Assert.Equal(TimeSpan.FromSeconds(1), a.SamplingInterval);
-                    },
-                    b => {
-                        Assert.Equal("i=2258", b.NodeId);
-                        Assert.Equal(TimeSpan.FromSeconds(3), b.PublishingInterval);
-                        Assert.Equal(TimeSpan.FromSeconds(2), b.SamplingInterval);
-                    });
+                Assert.Single(list.Items);
                 Assert.Null(list.ContinuationToken);
+                Assert.Equal("i=2258", list.Items.Single().NodeId);
+                Assert.Equal(TimeSpan.FromSeconds(3), list.Items.Single().PublishingInterval);
+                Assert.Equal(TimeSpan.FromSeconds(2), list.Items.Single().SamplingInterval);
             }
         }
 
@@ -506,6 +492,26 @@ namespace Microsoft.Azure.IIoT.OpcUa.Twin.Services {
                 // Assert
                 Assert.NotNull(list);
                 Assert.Equal(100, list.Items.Count);
+                Assert.Null(list.ContinuationToken);
+            }
+        }
+
+        [Fact]
+        public async Task ListNodesWhenNoNodesConfiguredTestAsync() {
+
+            using (var mock = Setup((v, q) => {
+                throw new AssertActualExpectedException(null, q, "Query");
+            })) {
+
+                IPublishServices service = mock.Create<PublisherAdapter>();
+
+                var list = await service.NodePublishListAsync("endpoint1", new PublishedItemListRequestModel {
+                    ContinuationToken = null
+                });
+
+                // Assert
+                Assert.NotNull(list);
+                Assert.Empty(list.Items);
                 Assert.Null(list.ContinuationToken);
             }
         }
