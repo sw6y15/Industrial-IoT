@@ -416,6 +416,26 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Clients {
             }
         }
 
+        [Fact]
+        public async Task ListNodesWhenNoNodesConfiguredTestAsync() {
+
+            using (var mock = Setup((v, q) => {
+                throw new AssertActualExpectedException(null, q, "Query");
+            })) {
+
+                IPublishServices<string> service = mock.Create<PublisherJobService>();
+
+                var list = await service.NodePublishListAsync("endpoint1", new PublishedItemListRequestModel {
+                    ContinuationToken = null
+                });
+
+                // Assert
+                Assert.NotNull(list);
+                Assert.Empty(list.Items);
+                Assert.Null(list.ContinuationToken);
+            }
+        }
+
         /// <summary>
         /// Setup mock
         /// </summary>
