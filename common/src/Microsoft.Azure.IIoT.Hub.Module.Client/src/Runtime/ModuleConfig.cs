@@ -31,7 +31,7 @@ namespace Microsoft.Azure.IIoT.Hub.Module.Client.Runtime {
             GetBoolOrDefault(BypassCertVerificationKey, () => false);
         /// <summary>Transports to use</summary>
         public TransportOption Transport => (TransportOption)Enum.Parse(typeof(TransportOption),
-            GetStringOrDefault(TransportKey, () => nameof(TransportOption.Any)), true);
+            GetStringOrDefault(TransportKey, () => nameof(TransportOption.MqttOverTcp)), true);
 
         /// <summary>
         /// Create configuration
