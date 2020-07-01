@@ -57,6 +57,11 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
         public TimeSpan? DataSetMetaDataSendInterval { get; set; }
 
         /// <summary>
+        /// Dataset writer is disabled
+        /// </summary>
+        public bool? IsDisabled { get; set; }
+
+        /// <summary>
         /// Last updated
         /// </summary>
         public PublisherOperationContextModel Updated { get; set; }

@@ -26,6 +26,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
                 ETag = model.GenerationId,
                 WriterGroupId = model.WriterGroupId,
                 DataSetFieldContentMask = model.DataSetFieldContentMask,
+                IsDisabled = model.IsDisabled ?? false,
                 DataSetMetaDataSendInterval = model.DataSetMetaDataSendInterval,
                 KeyFrameCount = model.KeyFrameCount,
                 KeyFrameInterval = model.KeyFrameInterval,
@@ -72,6 +73,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
                 DataSetWriterId = document.Id,
                 GenerationId = document.ETag,
                 WriterGroupId = document.WriterGroupId,
+                IsDisabled = document.IsDisabled ? true : (bool?)null,
                 DataSet = new PublishedDataSetSourceInfoModel {
                     User = document.CredentialType == null ? null :
                         new CredentialModel {

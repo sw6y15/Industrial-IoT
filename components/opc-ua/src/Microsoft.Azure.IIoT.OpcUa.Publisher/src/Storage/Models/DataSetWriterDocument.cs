@@ -218,6 +218,12 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
         public DateTime? LastResultChange { get; set; }
 
         /// <summary>
+        /// Writer is disabled
+        /// </summary>
+        [DataMember]
+        public bool IsDisabled { get; set; }
+
+        /// <summary>
         /// Etag
         /// </summary>
         [DataMember(Name = "_etag")]

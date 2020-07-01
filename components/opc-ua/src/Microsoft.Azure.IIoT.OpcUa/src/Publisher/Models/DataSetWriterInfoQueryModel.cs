@@ -24,5 +24,10 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
         /// Dataset writer group.
         /// </summary>
         public string WriterGroupId { get; set; }
+
+        /// <summary>
+        /// Whether to exclude disabled items
+        /// </summary>
+        public bool? ExcludeDisabled { get; set; }
     }
 }

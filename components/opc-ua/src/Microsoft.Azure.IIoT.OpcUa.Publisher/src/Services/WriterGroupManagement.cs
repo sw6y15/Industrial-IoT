@@ -6,6 +6,9 @@
 namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
     using Microsoft.Azure.IIoT.OpcUa.Publisher;
     using Microsoft.Azure.IIoT.OpcUa.Publisher.Models;
+    using Microsoft.Azure.IIoT.OpcUa.Registry;
+    using Microsoft.Azure.IIoT.OpcUa.Registry.Models;
+    using Microsoft.Azure.IIoT.Utils;
     using System.Threading.Tasks;
     using System.Threading;
     using System;
@@ -14,7 +17,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
     /// Manage writer group and contained writer state
     /// </summary>
     public sealed class WriterGroupManagement : IDataSetWriterStateUpdate,
-        IWriterGroupStateUpdate {
+        IWriterGroupStateUpdate, IEndpointRegistryListener {
 
         /// <summary>
         /// Create publisher registry service
@@ -117,7 +120,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                         };
                     }
                     return Task.FromResult(updated);
-            }, ct);
+                }, ct);
             if (updated) {
                 // If updated notify about dataset writer change
                 await _itemEvents.NotifyAllAsync(
@@ -194,6 +197,134 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                 // If updated notify about group change
                 await _groupEvents.NotifyAllAsync(
                     l => l.OnWriterGroupStateChangeAsync(context, group));
+            }
+        }
+
+        /// <inheritdoc/>
+        public Task OnEndpointNewAsync(RegistryOperationContextModel context,
+            EndpointInfoModel endpoint) {
+            return EnableWritersWithEndpointAsync(endpoint.Registration.Id, true,
+                context == null ? null : new PublisherOperationContextModel {
+                    AuthorityId = context.AuthorityId,
+                    Time = context.Time
+                });
+        }
+
+        /// <inheritdoc/>
+        public Task OnEndpointUpdatedAsync(RegistryOperationContextModel context,
+            EndpointInfoModel endpoint) {
+            // No changes required
+            return Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
+        public Task OnEndpointActivatedAsync(RegistryOperationContextModel context,
+            EndpointInfoModel endpoint) {
+            return EnableWritersWithEndpointAsync(endpoint.Registration.Id, true,
+                context == null ? null : new PublisherOperationContextModel {
+                    AuthorityId = context.AuthorityId,
+                    Time = context.Time
+                });
+        }
+
+        /// <inheritdoc/>
+        public Task OnEndpointEnabledAsync(RegistryOperationContextModel context,
+            EndpointInfoModel endpoint) {
+            return EnableWritersWithEndpointAsync(endpoint.Registration.Id, true,
+                context == null ? null : new PublisherOperationContextModel {
+                    AuthorityId = context.AuthorityId,
+                    Time = context.Time
+                });
+        }
+
+        /// <inheritdoc/>
+        public Task OnEndpointDeactivatedAsync(RegistryOperationContextModel context,
+            EndpointInfoModel endpoint) {
+            return EnableWritersWithEndpointAsync(endpoint.Registration.Id, false,
+                context == null ? null : new PublisherOperationContextModel {
+                    AuthorityId = context.AuthorityId,
+                    Time = context.Time
+                });
+        }
+
+        /// <inheritdoc/>
+        public Task OnEndpointDisabledAsync(RegistryOperationContextModel context,
+            EndpointInfoModel endpoint) {
+            return EnableWritersWithEndpointAsync(endpoint.Registration.Id, false,
+                context == null ? null : new PublisherOperationContextModel {
+                    AuthorityId = context.AuthorityId,
+                    Time = context.Time
+                });
+        }
+
+        /// <inheritdoc/>
+        public Task OnEndpointDeletedAsync(RegistryOperationContextModel context,
+            string endpointId, EndpointInfoModel endpoint) {
+            return EnableWritersWithEndpointAsync(endpoint.Registration.Id, false,
+                context == null ? null : new PublisherOperationContextModel {
+                    AuthorityId = context.AuthorityId,
+                    Time = context.Time
+                });
+        }
+
+        /// <summary>
+        /// Enable or disable all writers with endpoint
+        /// </summary>
+        /// <param name="endpointId"></param>
+        /// <param name="enable"></param>
+        /// <param name="context"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        private async Task EnableWritersWithEndpointAsync(string endpointId, bool enable,
+            PublisherOperationContextModel context, CancellationToken ct = default) {
+            if (string.IsNullOrEmpty(endpointId)) {
+                throw new ArgumentNullException(nameof(endpointId));
+            }
+            var results = await _writers.QueryAsync(new DataSetWriterInfoQueryModel {
+                EndpointId = endpointId,
+                ExcludeDisabled = !enable
+            }, null, null, ct);
+            var continuationToken = results.ContinuationToken;
+            do {
+                foreach (var writer in results.DataSetWriters) {
+                    await Try.Async(() => EnableDataSetWriterAsync(writer.DataSetWriterId, enable,
+                        context, ct));
+                }
+                results = await _writers.QueryAsync(null, continuationToken, null, ct);
+                continuationToken = results.ContinuationToken;
+            }
+            while (!string.IsNullOrEmpty(continuationToken));
+        }
+
+        /// <summary>
+        /// Enable or disable single writer
+        /// </summary>
+        /// <param name="dataSetWriterId"></param>
+        /// <param name="enable"></param>
+        /// <param name="context"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        private async Task EnableDataSetWriterAsync(string dataSetWriterId, bool enable,
+             PublisherOperationContextModel context, CancellationToken ct = default) {
+            var updated = true;
+            var writer = await _writers.UpdateAsync(dataSetWriterId, existing => {
+                if (existing.IsDisabled == true && enable) {
+                    // Remove disable flag and enable
+                    existing.IsDisabled = null;
+                }
+                else if (existing.IsDisabled != true && !enable) {
+                    // Now disable enabled item
+                    existing.IsDisabled = true;
+                }
+                else {
+                    updated = false;
+                }
+                return Task.FromResult(updated);
+            }, ct);
+            if (updated) {
+                // If updated notify about dataset writer state change
+                await _writerEvents.NotifyAllAsync(
+                    l => l.OnDataSetWriterStateChangeAsync(context, dataSetWriterId, writer));
             }
         }
 

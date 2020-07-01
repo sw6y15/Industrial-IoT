@@ -17,6 +17,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
     using System.Collections.Generic;
     using System.Linq;
     using System;
+    using Microsoft.Azure.IIoT.OpcUa.Registry.Models;
 
     /// <summary>
     /// PubSub configuration service manages the Publish configuration surface
@@ -371,7 +372,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
             do {
                 // Get writers one by one
                 var results = await _writers.QueryAsync(new DataSetWriterInfoQueryModel {
-                    WriterGroupId = writerGroupId
+                    WriterGroupId = writerGroupId,
+                    ExcludeDisabled = true
                 }, continuationToken, null, ct);
                 continuationToken = results.ContinuationToken;
                 foreach (var writer in results.DataSetWriters) {
@@ -896,7 +898,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
             if (string.IsNullOrEmpty(writerGroupId)) {
                 throw new ArgumentNullException(nameof(writerGroupId));
             }
-            // If there are writers in the group we fail removal
+            // If there are any writers in the group we fail removal
             var result = await _writers.QueryAsync(new DataSetWriterInfoQueryModel {
                 WriterGroupId = writerGroupId
             }, null, 1, ct);

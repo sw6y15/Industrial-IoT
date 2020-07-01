@@ -265,7 +265,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
                 throw new ArgumentNullException(nameof(dataSetWriter.WriterGroupId));
             }
             await AddRemoveWriterFromWriterGroupTwinAsync(
-                WriterGroupRegistryEx.ToDeviceId(writerGroupId), dataSetWriter.DataSetWriterId);
+                WriterGroupRegistryEx.ToDeviceId(writerGroupId), dataSetWriter.DataSetWriterId,
+                dataSetWriter.IsDisabled ?? false);
         }
 
         /// <inheritdoc/>
@@ -284,12 +285,15 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
                     $"IS_DEFINED(properties.desired.{IdentityType.DataSet}_{dataSetWriterId}) AND " +
                     $"tags.{nameof(EntityRegistration.DeviceType)} = '{IdentityType.WriterGroup}' ");
                 foreach (var twin in twins) {
-                    await AddRemoveWriterFromWriterGroupTwinAsync(twin.Id, dataSetWriterId);
+                    await AddRemoveWriterFromWriterGroupTwinAsync(twin.Id, dataSetWriterId,
+                        dataSetWriter.IsDisabled ?? false);
                 }
-                return;
             }
-            await AddRemoveWriterFromWriterGroupTwinAsync(
-                WriterGroupRegistryEx.ToDeviceId(writerGroupId), dataSetWriterId);
+            else {
+                await AddRemoveWriterFromWriterGroupTwinAsync(
+                    WriterGroupRegistryEx.ToDeviceId(writerGroupId), dataSetWriterId,
+                    dataSetWriter.IsDisabled != false);
+            }
         }
 
         /// <inheritdoc/>

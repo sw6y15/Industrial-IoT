@@ -76,16 +76,23 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Models {
         public TimeSpan? DataSetMetaDataSendInterval { get; set; }
 
         /// <summary>
+        /// Dataset writer is disabled
+        /// </summary>
+        [DataMember(Name = "isDisabled", Order = 9,
+            EmitDefaultValue = false)]
+        public bool? IsDisabled { get; set; }
+
+        /// <summary>
         /// Last updated
         /// </summary>
-        [DataMember(Name = "updated", Order = 9,
+        [DataMember(Name = "updated", Order = 19,
             EmitDefaultValue = false)]
         public PublisherOperationContextApiModel Updated { get; set; }
 
         /// <summary>
         /// Created
         /// </summary>
-        [DataMember(Name = "created", Order = 10,
+        [DataMember(Name = "created", Order = 11,
             EmitDefaultValue = false)]
         public PublisherOperationContextApiModel Created { get; set; }
     }

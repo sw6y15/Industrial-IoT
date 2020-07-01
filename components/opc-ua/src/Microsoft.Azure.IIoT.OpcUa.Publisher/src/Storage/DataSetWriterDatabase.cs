@@ -170,9 +170,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
                 if (document == null) {
                     return null;
                 }
-                var group = document.Value.ToFrameworkModel();
-                if (!await predicate(group)) {
-                    return group;
+                var writer = document.Value.ToFrameworkModel();
+                if (!await predicate(writer)) {
+                    return writer;
                 }
                 try {
                     await _documents.DeleteAsync(document, ct);
@@ -180,7 +180,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
                 catch (ResourceOutOfDateException) {
                     continue;
                 }
-                return group;
+                return writer;
             }
         }
 
@@ -220,6 +220,10 @@ $"r.{nameof(DataSetWriterDocument.EndpointId)} = @endpoint AND ";
                 queryString +=
 $"r.{nameof(DataSetWriterDocument.DataSetName)} = @name AND ";
                 queryParameters.Add("@name", query.DataSetName);
+            }
+            if (query?.ExcludeDisabled == true) {
+                queryString +=
+$"r.{nameof(DataSetWriterDocument.IsDisabled)} = false AND ";
             }
             queryString +=
 $"r.{nameof(DataSetWriterDocument.ClassType)} = '{DataSetWriterDocument.ClassTypeName}'";
