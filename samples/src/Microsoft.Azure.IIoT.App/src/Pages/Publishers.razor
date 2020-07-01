@@ -7,6 +7,7 @@
 
 @using Microsoft.AspNetCore.Components;
 @using Microsoft.Azure.IIoT.App.Services
+@using Microsoft.Azure.IIoT.App.Components.Drawer
 @using Microsoft.Azure.IIoT.App.Components.Pager
 @using Microsoft.Azure.IIoT.App.Components.ErrorMessage
 @using Microsoft.Azure.IIoT.OpcUa.Api.Registry;
@@ -49,10 +50,10 @@
                     </div>
                 </td>
                 @{string connectStatus = publisher.Connected == null
-                    ? CommonHelper.None
-                    : publisher.Connected == true
-                        ? "Connected"
-                        : "Disconnected";}
+                      ? CommonHelper.None
+                      : publisher.Connected == true
+                          ? "Connected"
+                          : "Disconnected";}
                 <td class="hover-text width-small">
                     <div>
                         @{
@@ -84,6 +85,10 @@
     </tbody>
 </table>
 <div class="@_tableEmpty center">No Publishers found.</div>
+
+<Drawer HeaderText="Publisher Config" ObjectData="@Publisher" IsOpen="@IsOpen" CloseDrawer="@(() => CloseDrawer())">
+    <_DrawerPublisher Publisher="@Publisher"></_DrawerPublisher>
+</Drawer>
 
 <ErrorMessage PageError="@_pagedPublisherList.Error" Status="@null"></ErrorMessage>
 

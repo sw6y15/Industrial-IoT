@@ -11,18 +11,17 @@ namespace Microsoft.Azure.IIoT.Services.Processor.Telemetry {
     using Microsoft.Azure.IIoT.OpcUa.Protocol.Services;
     using Microsoft.Azure.IIoT.OpcUa.Subscriber.Handlers;
     using Microsoft.Azure.IIoT.OpcUa.Subscriber.Processors;
-    using Microsoft.Azure.IIoT.Exceptions;
     using Microsoft.Azure.IIoT.Serializers;
     using Microsoft.Azure.IIoT.Hub.Processor.EventHub;
     using Microsoft.Azure.IIoT.Hub.Processor.Services;
     using Microsoft.Azure.IIoT.Hub.Services;
-    using Microsoft.Azure.IIoT.Utils;
     using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Hosting;
     using Autofac;
+    using Autofac.Extensions.DependencyInjection;
     using Serilog;
     using System;
-    using System.IO;
-    using System.Runtime.Loader;
     using System.Collections.Generic;
     using System.Threading.Tasks;
 
@@ -38,69 +37,53 @@ namespace Microsoft.Azure.IIoT.Services.Processor.Telemetry {
         /// </summary>
         /// <param name="args"></param>
         public static void Main(string[] args) {
-
-            // Load hosting configuration
-            var config = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", true)
-                .AddFromDotEnvFile()
-                .AddEnvironmentVariables()
-                .AddEnvironmentVariables(EnvironmentVariableTarget.User)
-                .AddCommandLine(args)
-                // Above configuration providers will provide connection
-                // details for KeyVault configuration provider.
-                .AddFromKeyVault(providerPriority: ConfigurationProviderPriority.Lowest)
-                .Build();
-
-            // Set up dependency injection for the event processor host
-            RunAsync(config).Wait();
+            CreateHostBuilder(args).Build().Run();
         }
 
         /// <summary>
-        /// Run
+        /// Create host builder
         /// </summary>
-        /// <param name="config"></param>
+        /// <param name="args"></param>
         /// <returns></returns>
-        public static async Task RunAsync(IConfiguration config) {
-            var exit = false;
-            while (!exit) {
-                // Wait until the event processor host unloads or is cancelled
-                var tcs = new TaskCompletionSource<bool>();
-                AssemblyLoadContext.Default.Unloading += _ => tcs.TrySetResult(true);
-                using (var container = ConfigureContainer(config).Build()) {
-                    var logger = container.Resolve<ILogger>();
-                    try {
-                        logger.Information("Telemetry event processor host started.");
-                        exit = await tcs.Task;
-                    }
-                    catch (InvalidConfigurationException e) {
-                        logger.Error(e,
-                            "Error starting telemetry event processor host - exit!");
-                        return;
-                    }
-                    catch (Exception ex) {
-                        logger.Error(ex,
-                            "Error running telemetry event processor host - restarting!");
-                    }
-                }
-            }
+        public static IHostBuilder CreateHostBuilder(string[] args) {
+            return Host.CreateDefaultBuilder(args)
+                .ConfigureHostConfiguration(configHost => {
+                    configHost.AddFromDotEnvFile()
+                    .AddEnvironmentVariables()
+                    .AddEnvironmentVariables(EnvironmentVariableTarget.User)
+                    // Above configuration providers will provide connection
+                    // details for KeyVault configuration provider.
+                    .AddFromKeyVault(providerPriority: ConfigurationProviderPriority.Lowest);
+                })
+                .UseServiceProviderFactory(new AutofacServiceProviderFactory())
+                .ConfigureContainer<ContainerBuilder>((hostBuilderContext, builder) => {
+                    // registering services in the Autofac ContainerBuilder
+                    ConfigureContainer(builder, hostBuilderContext.Configuration);
+                })
+                .ConfigureServices((hostBuilderContext, services) => {
+                    services.AddHostedService<HostStarterService>();
+                })
+                .UseSerilog();
         }
+
 
         /// <summary>
         /// Autofac configuration.
         /// </summary>
-        public static ContainerBuilder ConfigureContainer(
+        /// <param name="builder"></param>
+        /// <param name="configuration"></param>
+        public static ContainerBuilder ConfigureContainer(ContainerBuilder builder,
             IConfiguration configuration) {
 
             var serviceInfo = new ServiceInfo();
             var config = new Config(configuration);
-            var builder = new ContainerBuilder();
 
             builder.RegisterInstance(serviceInfo)
                 .AsImplementedInterfaces();
 
             // Register configuration interfaces
             builder.RegisterInstance(config)
+                .AsSelf()
                 .AsImplementedInterfaces();
             builder.RegisterInstance(config.Configuration)
                 .AsImplementedInterfaces();
@@ -148,11 +131,6 @@ namespace Microsoft.Azure.IIoT.Services.Processor.Telemetry {
             // ... forward unknown samples to the secondary eventhub
             builder.RegisterType<UnknownTelemetryForwarder>()
                 .AsImplementedInterfaces();
-
-            // ... and auto start
-            builder.RegisterType<HostAutoStart>()
-                .AutoActivate()
-                .AsImplementedInterfaces().SingleInstance();
 
             return builder;
         }

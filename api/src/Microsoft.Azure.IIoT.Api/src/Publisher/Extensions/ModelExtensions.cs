@@ -33,6 +33,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Models {
                 DisplayName = model.DisplayName,
                 ServerTimestamp = model.ServerTimestamp,
                 ServerPicoseconds = model.ServerPicoseconds,
+                SequenceNumber = model.SequenceNumber,
                 SourceTimestamp = model.SourceTimestamp,
                 SourcePicoseconds = model.SourcePicoseconds,
                 Timestamp = model.Timestamp,

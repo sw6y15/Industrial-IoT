@@ -1,0 +1,31 @@
+﻿@*------------------------------------------------------------
+     Copyright (c) Microsoft Corporation.  All rights reserved.
+     Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
+    ------------------------------------------------------------*@
+
+@using Microsoft.Azure.IIoT.App.Common
+@using Microsoft.Azure.IIoT.App.Services
+
+@inject UICommon CommonHelper
+@inject Registry RegistryHelper
+
+<div class="drawer-content list-group">
+    <div class="list-group-item text-justify list-group-item-heading">
+        <b>Enter configuration parameters and click on apply.</b>
+    </div>
+    <hr />
+    <div class="list-group-item text-left">
+        <EditForm Model="@InputData" OnValidSubmit="@UpdatePublisherConfigAsync">
+            <FluentValidator />
+            <div class="form-group">
+                <div class="label">Log Level</div>
+                <input @bind="@InputData.RequestedLogLevel" aria-label="LogLevel" type="text" class="form-control" placeholder="@(InputData.RequestedLogLevel)" />
+            </div><br />
+            <hr />
+            <ValidationSummary />
+            <div>
+                <button type="submit" class="btn btn-primary shadow-none">Apply</button>
+            </div>
+        </EditForm>
+    </div>
+</div>

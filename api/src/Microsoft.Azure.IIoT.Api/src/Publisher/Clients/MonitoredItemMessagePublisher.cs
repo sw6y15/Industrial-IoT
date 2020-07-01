@@ -57,6 +57,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Clients {
                         ServerTimestamp = datapoint.Value?.ServerTimestamp,
                         ServerPicoseconds = datapoint.Value?.ServerPicoseconds,
                         DataType = datapoint.Value?.DataType,
+                        SequenceNumber = message.SequenceNumber,
                         EndpointId = null // TODO Remove
                     }
                 };
