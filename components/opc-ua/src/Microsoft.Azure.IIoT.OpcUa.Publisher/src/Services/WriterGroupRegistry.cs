@@ -136,7 +136,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                 // Add variables - TODO consider adding a bulk database api.
                 foreach (var variable in request.Variables) {
                     try {
-                        var info = variable.AsDataSetVariable(context);
+                        var dataSetVariable = variable.AsDataSetVariable(context);
                         //
                         // Create a unique hash for the variable from node id
                         // This is done so that the behavior is the same as the
@@ -144,30 +144,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                         // is the node id, and all variables are also removed
                         // by the single node id.  See unit tests.
                         //
-                        info.Id = info.PublishedVariableNodeId.ToSha1Hash();
-                        PublishedDataSetVariableModel result;
-                        while (true) {
-                            try {
-                                result = await _dataSets.AddDataSetVariableAsync(
-                                    endpointId, info);
-                                // Added
-                                break;
-                            }
-                            catch (ConflictingResourceException) {
-                                // Already exists - update regardless of generation id
-                                try {
-                                    result = await _dataSets.UpdateDataSetVariableAsync(
-                                        endpointId, info.Id, existing => {
-                                            existing.Assign(info);
-                                            return Task.FromResult(true);
-                                        });
-                                    break;
-                                }
-                                catch (ResourceNotFoundException) {
-                                    continue;
-                                }
-                            }
-                        }
+                        dataSetVariable.Id = dataSetVariable.PublishedVariableNodeId.ToSha1Hash();
+                        var result = await _dataSets.AddOrUpdateDataSetVariableAsync(
+                            endpointId, dataSetVariable.Id, _ => Task.FromResult(dataSetVariable));
                         results.Add(new DataSetAddVariableResultModel {
                             GenerationId = result.GenerationId,
                             Id = result.Id

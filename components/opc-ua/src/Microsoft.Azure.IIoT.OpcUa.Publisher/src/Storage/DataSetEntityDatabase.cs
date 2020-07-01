@@ -59,9 +59,46 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
         }
 
         /// <inheritdoc/>
+        public async Task<PublishedDataSetEventsModel> AddOrUpdateEventDataSetAsync(string dataSetWriterId,
+            Func<PublishedDataSetEventsModel, Task<PublishedDataSetEventsModel>> predicate,
+            CancellationToken ct) {
+            if (string.IsNullOrEmpty(dataSetWriterId)) {
+                throw new ArgumentNullException(nameof(dataSetWriterId));
+            }
+            var eventsId = DataSetEntityDocumentEx.GetDocumentId(dataSetWriterId);
+            while (true) {
+                var document = await _documents.FindAsync<DataSetEntityDocument>(eventsId, ct);
+                var updateOrAdd = document?.Value.ToEventDataSetModel();
+                var item = await predicate(updateOrAdd);
+                if (item == null) {
+                    return updateOrAdd;
+                }
+                var updated = item.ToDocumentModel(dataSetWriterId);
+                if (document == null) {
+                    try {
+                        // Add document
+                        var result = await _documents.AddAsync(updated, ct);
+                        return result.Value.ToEventDataSetModel();
+                    }
+                    catch (ConflictingResourceException) {
+                        // Conflict - try update now
+                        continue;
+                    }
+                }
+                // Try replacing
+                try {
+                    var result = await _documents.ReplaceAsync(document, updated, ct);
+                    return result.Value.ToEventDataSetModel();
+                }
+                catch (ResourceOutOfDateException) {
+                    continue;
+                }
+            }
+        }
+
+        /// <inheritdoc/>
         public async Task<PublishedDataSetEventsModel> UpdateEventDataSetAsync(string dataSetWriterId,
             Func<PublishedDataSetEventsModel, Task<bool>> predicate, CancellationToken ct) {
-
             if (string.IsNullOrEmpty(dataSetWriterId)) {
                 throw new ArgumentNullException(nameof(dataSetWriterId));
             }
@@ -171,6 +208,49 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
                 }
                 catch {
                     throw;
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public async Task<PublishedDataSetVariableModel> AddOrUpdateDataSetVariableAsync(
+            string dataSetWriterId, string variableId,
+            Func<PublishedDataSetVariableModel, Task<PublishedDataSetVariableModel>> predicate,
+            CancellationToken ct) {
+            if (string.IsNullOrEmpty(variableId)) {
+                throw new ArgumentNullException(nameof(variableId));
+            }
+            if (string.IsNullOrEmpty(dataSetWriterId)) {
+                throw new ArgumentNullException(nameof(dataSetWriterId));
+            }
+            while (true) {
+                var document = await _documents.FindAsync<DataSetEntityDocument>(
+                    DataSetEntityDocumentEx.GetDocumentId(dataSetWriterId, variableId), ct);
+                var updateOrAdd = document?.Value.ToDataSetVariableModel();
+                var variable = await predicate(updateOrAdd);
+                if (variable == null) {
+                    return updateOrAdd;
+                }
+                variable.Id = variableId;
+                var updated = variable.ToDocumentModel(dataSetWriterId);
+                if (document == null) {
+                    try {
+                        // Add document
+                        var result = await _documents.AddAsync(updated, ct);
+                        return result.Value.ToDataSetVariableModel();
+                    }
+                    catch (ConflictingResourceException) {
+                        // Conflict - try update now
+                        continue;
+                    }
+                }
+                // Try replacing
+                try {
+                    var result = await _documents.ReplaceAsync(document, updated, ct);
+                    return result.Value.ToDataSetVariableModel();
+                }
+                catch (ResourceOutOfDateException) {
+                    continue;
                 }
             }
         }

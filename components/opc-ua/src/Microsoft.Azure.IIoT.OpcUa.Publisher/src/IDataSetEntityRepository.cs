@@ -37,6 +37,34 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher {
             PublishedDataSetVariableModel variable, CancellationToken ct = default);
 
         /// <summary>
+        /// Add a new one or update existing event dataset
+        /// </summary>
+        /// <param name="dataSetWriterId"></param>
+        /// <param name="predicate">receives existing dataset or
+        /// null if not exists, return null to cancel update.
+        /// </param>
+        /// <param name="ct"></param>
+        /// <returns>The existing or udpated writer group</returns>
+        Task<PublishedDataSetEventsModel> AddOrUpdateEventDataSetAsync(string dataSetWriterId,
+             Func<PublishedDataSetEventsModel, Task<PublishedDataSetEventsModel>> predicate,
+             CancellationToken ct = default);
+
+        /// <summary>
+        /// Add a new one or update existing variable
+        /// </summary>
+        /// <param name="dataSetWriterId"></param>
+        /// <param name="variableId"></param>
+        /// <param name="predicate">receives existing variable or
+        /// null if not exists, return null to cancel update.
+        /// </param>
+        /// <param name="ct"></param>
+        /// <returns>The existing or udpated writer group</returns>
+        Task<PublishedDataSetVariableModel> AddOrUpdateDataSetVariableAsync(
+            string dataSetWriterId, string variableId,
+             Func<PublishedDataSetVariableModel, Task<PublishedDataSetVariableModel>> predicate,
+             CancellationToken ct = default);
+
+        /// <summary>
         /// Update event dataset
         /// </summary>
         /// <param name="dataSetWriterId"></param>
