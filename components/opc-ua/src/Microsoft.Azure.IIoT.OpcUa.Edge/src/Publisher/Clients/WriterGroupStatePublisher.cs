@@ -6,6 +6,7 @@
 namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Clients {
     using Microsoft.Azure.IIoT.OpcUa.Publisher.Models;
     using Microsoft.Azure.IIoT.OpcUa.Registry.Models;
+    using Microsoft.Azure.IIoT.OpcUa.Registry;
     using Microsoft.Azure.IIoT.Serializers;
     using Microsoft.Azure.IIoT.Tasks;
     using Microsoft.Azure.IIoT.Module;

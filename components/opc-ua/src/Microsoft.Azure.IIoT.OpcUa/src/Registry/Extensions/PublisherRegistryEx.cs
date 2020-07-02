@@ -6,8 +6,9 @@
 namespace Microsoft.Azure.IIoT.OpcUa.Registry {
     using Microsoft.Azure.IIoT.Exceptions;
     using Microsoft.Azure.IIoT.OpcUa.Registry.Models;
+    using Microsoft.Azure.IIoT.Hub;
+    using System;
     using System.Collections.Generic;
-    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -15,6 +16,54 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry {
     /// Publisher registry extensions
     /// </summary>
     public static class PublisherRegistryEx {
+
+        /// <summary>
+        /// Convert a writer Group Id to device id
+        /// </summary>
+        /// <param name="writerGroupId"></param>
+        /// <returns></returns>
+        public static string ToDeviceId(string writerGroupId) {
+            return kWriterGroupDeviceIdPrefix + writerGroupId;
+        }
+
+        /// <summary>
+        /// Returns writer group id from device id
+        /// </summary>
+        /// <param name="deviceId"></param>
+        /// <returns></returns>
+        public static string ToWriterGroupId(string deviceId) {
+            if (string.IsNullOrEmpty(deviceId)) {
+                return null;
+            }
+            if (deviceId.StartsWith(kWriterGroupDeviceIdPrefix)) {
+                return deviceId.Substring(kWriterGroupDeviceIdPrefix.Length);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Convert a writer id to a property name
+        /// </summary>
+        /// <param name="dataSetWriterId"></param>
+        /// <returns></returns>
+        public static string ToPropertyName(string dataSetWriterId) {
+            return IdentityType.DataSet + "_" + dataSetWriterId;
+        }
+
+        /// <summary>
+        /// Returns writer id from property name
+        /// </summary>
+        /// <param name="propertyName"></param>
+        /// <returns></returns>
+        public static string ToDataSetWriterId(string propertyName) {
+            if (string.IsNullOrEmpty(propertyName)) {
+                return null;
+            }
+            if (propertyName.StartsWith(IdentityType.DataSet)) {
+                return propertyName.Replace(IdentityType.DataSet + "_", "");
+            }
+            throw new ArgumentException("Not a data set writer id");
+        }
 
         /// <summary>
         /// Find publisher.
@@ -76,5 +125,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry {
             }
             return supervisors;
         }
+
+        private const string kWriterGroupDeviceIdPrefix = "job_";
     }
 }
