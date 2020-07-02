@@ -4,7 +4,7 @@
 // ------------------------------------------------------------
 
 namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
-    using Microsoft.Azure.Documents;
+    using Microsoft.Azure.Cosmos;
     using System;
 
     /// <summary>
@@ -17,15 +17,15 @@ namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
         /// Create document
         /// </summary>
         /// <param name="doc"></param>
-        internal DocumentInfo(Document doc) {
+        internal DocumentInfo(ItemResponse<T> doc) {
             _doc = doc ?? throw new ArgumentNullException(nameof(doc));
         }
 
         /// <inheritdoc/>
-        public string Id => _doc.Id;
+        public string Id => ((dynamic)_doc.Resource).Id;
 
         /// <inheritdoc/>
-        public T Value => (T)(dynamic)_doc;
+        public T Value => _doc.Resource;
 
         /// <inheritdoc/>
         public string PartitionKey => _doc.GetPropertyValue<string>(
@@ -34,6 +34,6 @@ namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
         /// <inheritdoc/>
         public string Etag => _doc.ETag;
 
-        private readonly Document _doc;
+        private readonly ItemResponse<T> _doc;
     }
 }

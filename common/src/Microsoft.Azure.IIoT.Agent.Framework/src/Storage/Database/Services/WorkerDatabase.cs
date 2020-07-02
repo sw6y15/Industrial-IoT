@@ -104,7 +104,7 @@ namespace Microsoft.Azure.IIoT.Agent.Framework.Storage.Database {
             if (string.IsNullOrEmpty(workerId)) {
                 throw new ArgumentNullException(nameof(workerId));
             }
-            await _documents.DeleteAsync(workerId, ct);
+            await _documents.DeleteAsync<WorkerDocument>(workerId, ct);
         }
 
         /// <summary>

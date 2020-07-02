@@ -50,7 +50,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Vault.Storage {
             }
             var client = _relationships.OpenSqlClient();
             try {
-                await client.DropAsync(CreateQuery(subjectId, false,
+                await client.DropAsync<TrustDocument>(CreateQuery(subjectId, false,
                     direction, objectId, out var queryParameters), queryParameters, null,
                     ct);
             }

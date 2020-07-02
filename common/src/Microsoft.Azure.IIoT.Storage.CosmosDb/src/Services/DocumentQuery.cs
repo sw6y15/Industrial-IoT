@@ -4,11 +4,10 @@
 // ------------------------------------------------------------
 
 namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
-    using Serilog;
     using Microsoft.Azure.IIoT.Utils;
-    using Microsoft.Azure.Documents;
-    using Microsoft.Azure.Documents.Client;
-    using Microsoft.Azure.Documents.Linq;
+    using Microsoft.Azure.Cosmos;
+    using Microsoft.Azure.Cosmos.Linq;
+    using Serilog;
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -23,17 +22,12 @@ namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
         /// <summary>
         /// Create document query client
         /// </summary>
-        /// <param name="client"></param>
-        /// <param name="databaseId"></param>
-        /// <param name="id"></param>
+        /// <param name="container"></param>
         /// <param name="partitioned"></param>
         /// <param name="logger"></param>
-        internal DocumentQuery(DocumentClient client, string databaseId,
-            string id, bool partitioned, ILogger logger) {
-            _client = client ?? throw new ArgumentNullException(nameof(client));
-            _databaseId = databaseId ?? throw new ArgumentNullException(nameof(databaseId));
-            _id = id ?? throw new ArgumentNullException(nameof(id));
+        internal DocumentQuery(Container container, bool partitioned, ILogger logger) {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _container = container ?? throw new ArgumentNullException(nameof(container));
             _partitioned = partitioned;
         }
 
@@ -43,24 +37,22 @@ namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
             if (string.IsNullOrEmpty(queryString)) {
                 throw new ArgumentNullException(nameof(queryString));
             }
-            var pk = _partitioned || string.IsNullOrEmpty(partitionKey) ? null :
-                new PartitionKey(partitionKey);
-            var query = _client.CreateDocumentQuery<Document>(
-                UriFactory.CreateDocumentCollectionUri(_databaseId, _id),
-                new SqlQuerySpec {
-                    QueryText = queryString,
-                    Parameters = new SqlParameterCollection(parameters?
-                        .Select(kv => new SqlParameter(kv.Key, kv.Value)) ??
-                            Enumerable.Empty<SqlParameter>())
-                },
-                new FeedOptions {
-                    MaxDegreeOfParallelism = 8,
-                    MaxItemCount = pageSize ?? -1,
-                    PartitionKey = pk,
 
-                    EnableCrossPartitionQuery = pk == null
+            var query = new QueryDefinition(queryString);
+            foreach (var item in parameters) {
+                query = query.WithParameter(item.Key, item.Value);
+            }
+
+            var pk = _partitioned || string.IsNullOrEmpty(partitionKey) ? 
+                (PartitionKey?)null : new PartitionKey(partitionKey);
+            var result = _container.GetItemQueryIterator<T>(query, null, 
+                new QueryRequestOptions {
+                    PartitionKey = pk,
+                    // ...
+                    MaxItemCount = pageSize ?? -1
                 });
-            return new DocumentInfoFeed<T>(query.AsDocumentQuery(), _logger);
+
+            return new DocumentInfoFeed<T>(result, _logger);
         }
 
         /// <inheritdoc/>
@@ -69,58 +61,50 @@ namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
             if (string.IsNullOrEmpty(continuationToken)) {
                 throw new ArgumentNullException(nameof(continuationToken));
             }
-            var pk = _partitioned || string.IsNullOrEmpty(partitionKey) ? null :
-                new PartitionKey(partitionKey);
-            var query = _client.CreateDocumentQuery<Document>(
-                UriFactory.CreateDocumentCollectionUri(_databaseId, _id),
-                new FeedOptions {
-                    MaxDegreeOfParallelism = 8,
-                    MaxItemCount = pageSize ?? -1,
+
+            var pk = _partitioned || string.IsNullOrEmpty(partitionKey) ?
+                (PartitionKey?)null : new PartitionKey(partitionKey);
+            var result = _container.GetItemQueryIterator<T>((string)null, continuationToken,
+                new QueryRequestOptions {
                     PartitionKey = pk,
-                    RequestContinuation = continuationToken,
-                    EnableCrossPartitionQuery = pk == null
+                    // ...
+                    MaxItemCount = pageSize ?? -1
                 });
-            return new DocumentInfoFeed<T>(query.AsDocumentQuery(), _logger);
+
+            return new DocumentInfoFeed<T>(result, _logger);
         }
 
         /// <inheritdoc/>
-        public async Task DropAsync(string queryString,
+        public async Task DropAsync<T>(string queryString,
             IDictionary<string, object> parameters, string partitionKey,
             CancellationToken ct) {
-            var query = new SqlQuerySpec {
-                QueryText = queryString,
-                Parameters = new SqlParameterCollection(parameters?
-                    .Select(kv => new SqlParameter(kv.Key, kv.Value)) ??
-                        Enumerable.Empty<SqlParameter>())
-            };
-            var uri = UriFactory.CreateStoredProcedureUri(_databaseId, _id,
-                DocumentDatabase.BulkDeleteSprocName);
-            var pk = _partitioned || string.IsNullOrEmpty(partitionKey) ? null :
-                new PartitionKey(partitionKey);
-            await Retry.WithExponentialBackoff(_logger, ct, async () => {
-                while (true) {
-                    try {
-                        dynamic scriptResult =
-                            await _client.ExecuteStoredProcedureAsync<dynamic>(uri,
-                            new RequestOptions { PartitionKey = pk }, query, ct);
-                        _logger.Debug("  {deleted} items deleted.", scriptResult.deleted);
-                        if (!scriptResult.continuation) {
-                            break;
-                        }
-                    }
-                    catch (Exception ex) {
-                        DocumentCollection.FilterException(ex);
-                    }
+
+            var query = new QueryDefinition(queryString);
+            foreach (var item in parameters) {
+                query = query.WithParameter(item.Key, item.Value);
+            }
+
+            var pk = _partitioned || string.IsNullOrEmpty(partitionKey) ?
+                (PartitionKey?)null : new PartitionKey(partitionKey);
+            var result = _container.GetItemQueryIterator<T>(query, null,
+                new QueryRequestOptions {
+                    PartitionKey = pk,
+                    // ...
+                    MaxItemCount = -1
+                });
+
+            while (result.HasMoreResults) {
+                var results = await result.ReadNextAsync(ct);
+                foreach (var toDelete in results) {
+                    await Container.DeleteItemAsync<T>(toDelete.Id, pk);
                 }
-            });
+            }
         }
 
         public void Dispose() {
         }
 
-        private readonly DocumentClient _client;
-        private readonly string _databaseId;
-        private readonly string _id;
+        private readonly Container _container;
         private readonly bool _partitioned;
         private readonly ILogger _logger;
     }

@@ -6,12 +6,13 @@
 namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
     using Microsoft.Azure.IIoT.Utils;
     using Microsoft.Azure.IIoT.Serializers;
-    using Microsoft.Azure.Documents.Client;
-    using Microsoft.Azure.Documents;
+    using Microsoft.Azure.Cosmos.Client;
+    using Microsoft.Azure.Cosmos;
     using Serilog;
     using System;
     using System.Threading.Tasks;
-    using Newtonsoft.Json;
+    using System.IO;
+    using System.IO.Pipelines;
 
     /// <summary>
     /// Provides document db and graph functionality for storage interfaces.
@@ -22,13 +23,13 @@ namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
         /// Creates server
         /// </summary>
         /// <param name="config"></param>
+        /// <param name="serializer"></param>
         /// <param name="logger"></param>
-        /// <param name="jsonConfig"></param>
-        public CosmosDbServiceClient(ICosmosDbConfig config,
-            ILogger logger, IJsonSerializerSettingsProvider jsonConfig = null) {
+        public CosmosDbServiceClient(ICosmosDbConfig config, IJsonSerializer serializer,
+            ILogger logger) {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _jsonConfig = jsonConfig;
+            _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
             if (string.IsNullOrEmpty(_config?.DbConnectionString)) {
                 throw new ArgumentNullException(nameof(_config.DbConnectionString));
             }
@@ -40,20 +41,53 @@ namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
                 databaseId = "default";
             }
             var cs = ConnectionString.Parse(_config.DbConnectionString);
-            if (_jsonConfig?.Settings != null) {
-                // Workaround https://github.com/Azure/azure-cosmos-dotnet-v2/issues/351
-                JsonConvert.DefaultSettings = () => _jsonConfig?.Settings;
+            var client = new CosmosClient(cs.Endpoint, cs.SharedAccessKey,
+                new CosmosClientOptions {
+                    Serializer = new CosmosJsonNetSerializer(_serializer),
+                    ConsistencyLevel = options?.Consistency.ToConsistencyLevel()
+                });
+            var response = await client.CreateDatabaseIfNotExistsAsync(databaseId, 
+                _config.ThroughputUnits);
+            return new DocumentDatabase(response.Database, _logger);
+        }
+
+        /// <summary>
+        /// Json serializer
+        /// </summary>
+        public class CosmosJsonNetSerializer : CosmosSerializer {
+
+            /// <summary>
+            /// Create serializer
+            /// </summary>
+            /// <param name="serializer"></param>
+            public CosmosJsonNetSerializer(IJsonSerializer serializer) {
+                _serializer = serializer;
             }
-            var client = new DocumentClient(new Uri(cs.Endpoint), cs.SharedAccessKey,
-                _jsonConfig?.Settings, null, options?.Consistency.ToConsistencyLevel());
-            await client.CreateDatabaseIfNotExistsAsync(new Database {
-                Id = databaseId
-            });
-            return new DocumentDatabase(client, databaseId, _config.ThroughputUnits, _logger, _jsonConfig);
+
+            /// <inheritdoc/>
+            public override T FromStream<T>(Stream stream) {
+                using (stream) {
+                    if (typeof(Stream).IsAssignableFrom(typeof(T))) {
+                        return (T)(object)stream;
+                    }
+                    using (var sr = new StreamReader(stream)) {
+                        return _serializer.Deserialize<T>(sr);
+                    }
+                }
+            }
+
+            /// <inheritdoc/>
+            public override Stream ToStream<T>(T input) {
+                var pipe = new Pipe();
+                _serializer.Serialize(pipe.Writer, input);
+                return pipe.Reader.AsStream();
+            }
+
+            private readonly IJsonSerializer _serializer;
         }
 
         private readonly ICosmosDbConfig _config;
         private readonly ILogger _logger;
-        private readonly IJsonSerializerSettingsProvider _jsonConfig;
+        private readonly IJsonSerializer _serializer;
     }
 }

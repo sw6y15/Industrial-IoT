@@ -3,7 +3,7 @@
 //  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace Microsoft.Azure.Documents.Client {
+namespace Microsoft.Azure.Cosmos {
     using Microsoft.Azure.IIoT.Storage;
 
     /// <summary>
@@ -16,21 +16,11 @@ namespace Microsoft.Azure.Documents.Client {
         /// </summary>
         /// <param name="options"></param>
         /// <param name="partitioned"></param>
-        /// <param name="etag"></param>
         /// <returns></returns>
-        public static RequestOptions ToRequestOptions(this OperationOptions options,
-            bool partitioned = true, string etag = null) {
-            var pk = !partitioned || string.IsNullOrEmpty(options?.PartitionKey) ? null :
+        public static PartitionKey ToPartitionKey(this OperationOptions options,
+            bool partitioned = true) {
+            return !partitioned || string.IsNullOrEmpty(options?.PartitionKey) ? default :
                 new PartitionKey(options?.PartitionKey);
-            var ac = string.IsNullOrEmpty(etag) ? null : new AccessCondition {
-                Condition = etag,
-                Type = AccessConditionType.IfMatch
-            };
-            return new RequestOptions {
-                AccessCondition = ac,
-                PartitionKey = pk,
-                ConsistencyLevel = options?.Consistency.ToConsistencyLevel()
-            };
         }
     }
 }

@@ -75,7 +75,7 @@ namespace Microsoft.Azure.IIoT.Crypto.Storage {
         /// <inheritdoc/>
         public async Task InvalidateAsync(byte[] serial, CancellationToken ct) {
             var serialNumber = new SerialNumber(serial).ToString();
-            await Try.Async(() => _crls.DeleteAsync(serialNumber, ct));
+            await Try.Async(() => _crls.DeleteAsync<CrlDocument>(serialNumber, ct));
         }
 
         /// <inheritdoc/>

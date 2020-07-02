@@ -3,7 +3,7 @@
 //  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace Microsoft.Azure.Documents.Client {
+namespace Microsoft.Azure.Cosmos.Client {
     using Microsoft.Azure.IIoT.Storage;
     using System;
 

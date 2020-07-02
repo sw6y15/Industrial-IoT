@@ -79,7 +79,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Migration {
                         continue;
                     }
                     // Force delete now
-                    await _source.DeleteAsync(document.Id);
+                    await _source.DeleteAsync<Application>(document.Id);
                 }
             }
         }

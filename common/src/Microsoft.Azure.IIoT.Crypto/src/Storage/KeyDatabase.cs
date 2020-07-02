@@ -51,7 +51,7 @@ namespace Microsoft.Azure.IIoT.Crypto.Storage {
 
         /// <inheritdoc/>
         public Task DeleteKeyAsync(KeyHandle handle, CancellationToken ct) {
-            return _keys.DeleteAsync(KeyId.GetId(handle), ct);
+            return _keys.DeleteAsync<KeyDocument>(KeyId.GetId(handle), ct);
         }
 
         /// <inheritdoc/>

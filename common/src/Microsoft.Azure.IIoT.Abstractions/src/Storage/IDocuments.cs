@@ -66,17 +66,6 @@ namespace Microsoft.Azure.IIoT.Storage {
             string etag = null);
 
         /// <summary>
-        /// Query items using expressions
-        /// </summary>
-        /// <param name="query"></param>
-        /// <param name="pageSize"></param>
-        /// <param name="options"></param>
-        /// <returns></returns>
-        IResultFeed<R> Query<T, R>(
-            Func<IQueryable<IDocumentInfo<T>>, IQueryable<R>> query,
-            int? pageSize = null, OperationOptions options = null);
-
-        /// <summary>
         /// Removes the item.
         /// </summary>
         /// <exception cref="ResourceOutOfDateException"/>
@@ -96,7 +85,7 @@ namespace Microsoft.Azure.IIoT.Storage {
         /// <param name="options"></param>
         /// <param name="etag"></param>
         /// <returns></returns>
-        Task DeleteAsync(string id,
+        Task DeleteAsync<T>(string id,
             CancellationToken ct = default,
             OperationOptions options = null, string etag = null);
 

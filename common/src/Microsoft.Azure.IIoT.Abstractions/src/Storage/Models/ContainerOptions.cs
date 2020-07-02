@@ -17,9 +17,9 @@ namespace Microsoft.Azure.IIoT.Storage {
         public TimeSpan? ItemTimeToLive { get; set; }
 
         /// <summary>
-        /// Partitioning
+        /// Parition key
         /// </summary>
-        public bool Partitioned { get; set; }
+        public string PartitionKey { get; set; }
 
         /// <summary>
         /// Throughput units

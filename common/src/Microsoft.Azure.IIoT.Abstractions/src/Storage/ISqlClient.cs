@@ -46,7 +46,7 @@ namespace Microsoft.Azure.IIoT.Storage {
         /// <param name="partitionKey"></param>
         /// <param name="ct"></param>
         /// <returns></returns>
-        Task DropAsync(string queryString,
+        Task DropAsync<T>(string queryString,
             IDictionary<string, object> parameters = null,
             string partitionKey = null,
             CancellationToken ct = default);

@@ -100,7 +100,8 @@ Commands and Options
                 .AddFromKeyVault()
                 .Build();
             var configuration = new CosmosDbConfig(config);
-            var server = new CosmosDbServiceClient(configuration, logger);
+            var server = new CosmosDbServiceClient(configuration, 
+                new NewtonSoftJsonSerializer(), logger);
             return await server.OpenAsync(
                 options.GetValueOrDefault("-d", "--db", "default"), null);
         }

@@ -5,8 +5,7 @@
 
 namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
     using Microsoft.Azure.IIoT.Serializers;
-    using Microsoft.Azure.Documents.Client;
-    using Microsoft.Azure.Documents;
+    using Microsoft.Azure.Cosmos;
     using Serilog;
     using System;
     using System.Linq;
@@ -17,7 +16,6 @@ namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
     using System.IO;
     using System.Text;
     using System.Net;
-    using CosmosContainer = Documents.DocumentCollection;
 
     /// <summary>
     /// Provides document db database interface.
@@ -25,31 +23,14 @@ namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
     internal sealed class DocumentDatabase : IDatabase {
 
         /// <summary>
-        /// Database id
-        /// </summary>
-        internal string DatabaseId { get; }
-
-        /// <summary>
-        /// Client
-        /// </summary>
-        internal DocumentClient Client { get; }
-
-        /// <summary>
         /// Creates database
         /// </summary>
-        /// <param name="client"></param>
-        /// <param name="databaseId"></param>
-        /// <param name="databaseThroughput"></param>
         /// <param name="logger"></param>
-        /// <param name="jsonConfig"></param>
-        internal DocumentDatabase(DocumentClient client, string databaseId, int? databaseThroughput,
-            ILogger logger, IJsonSerializerSettingsProvider jsonConfig = null) {
+        /// <param name="database"></param>
+        internal DocumentDatabase(Database database, ILogger logger) {
+            _database = database ?? throw new ArgumentNullException(nameof(database));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            Client = client ?? throw new ArgumentNullException(nameof(client));
-            DatabaseId = databaseId ?? throw new ArgumentNullException(nameof(databaseId));
-            _jsonConfig = jsonConfig;
             _collections = new ConcurrentDictionary<string, DocumentCollection>();
-            _databaseThroughput = databaseThroughput;
         }
 
         /// <inheritdoc/>
@@ -60,18 +41,13 @@ namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
 
         /// <inheritdoc/>
         public async Task<IEnumerable<string>> ListContainersAsync(CancellationToken ct) {
-            var continuation = string.Empty;
             var result = new List<string>();
-            do {
-                var response = await Client.ReadDocumentCollectionFeedAsync(
-                    UriFactory.CreateDatabaseUri(DatabaseId),
-                    new FeedOptions {
-                        RequestContinuation = continuation
-                    });
-                continuation = response.ResponseContinuation;
-                result.AddRange(response.Select(c => c.Id));
+            var resultSetIterator = _database.GetContainerQueryIterator<ContainerProperties>();
+            while (resultSetIterator.HasMoreResults) {
+                foreach (var container in await resultSetIterator.ReadNextAsync()) {
+                    result.Add(container.Id);
+                }
             }
-            while (!string.IsNullOrEmpty(continuation));
             return result;
         }
 
@@ -80,15 +56,19 @@ namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
             if (string.IsNullOrEmpty(id)) {
                 throw new ArgumentNullException(nameof(id));
             }
-            await Client.DeleteDocumentCollectionAsync(
-                UriFactory.CreateDocumentCollectionUri(DatabaseId, id));
-            _collections.TryRemove(id, out var collection);
+            try {
+                var container = _database.GetContainer(id);
+                await container.DeleteContainerAsync();
+            }
+            catch { }
+            finally {
+                _collections.TryRemove(id, out var collection);
+            }
         }
 
         /// <inheritdoc/>
         public void Dispose() {
             _collections.Clear();
-            Client.Dispose();
         }
 
         /// <summary>
@@ -103,9 +83,9 @@ namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
                 id = "default";
             }
             if (!_collections.TryGetValue(id, out var collection)) {
-                var coll = await EnsureCollectionExistsAsync(id, options);
-                collection = _collections.GetOrAdd(id, k =>
-                    new DocumentCollection(this, coll, _logger, _jsonConfig));
+                var container = await EnsureCollectionExistsAsync(id, options);
+                collection = _collections.GetOrAdd(id, k => new DocumentCollection(
+                    container, !string.IsNullOrEmpty(options?.PartitionKey), _logger));
             }
             return collection;
         }
@@ -116,39 +96,27 @@ namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
         /// <param name="id"></param>
         /// <param name="options"></param>
         /// <returns></returns>
-        private async Task<CosmosContainer> EnsureCollectionExistsAsync(string id,
+        private async Task<Container> EnsureCollectionExistsAsync(string id,
             ContainerOptions options) {
 
-            var database = await Client.CreateDatabaseIfNotExistsAsync(
-                new Database {
-                    Id = DatabaseId
-                },
-                new RequestOptions {
-                    OfferThroughput = _databaseThroughput
-                }
-            );
-
-            var container = new CosmosContainer {
+            var containerProperties = new ContainerProperties {
                 Id = id,
                 DefaultTimeToLive = (int?)options?.ItemTimeToLive?.TotalMilliseconds ?? -1,
-                IndexingPolicy = new IndexingPolicy(new RangeIndex(DataType.String) {
-                    Precision = -1
-                })
+                IndexingPolicy = new IndexingPolicy {
+                    Automatic = true, // new RangeIndex(DataType.String) {
+                                      //  Precision = -1
+                                      //     })
+                }
             };
-            if (options?.Partitioned ?? false) {
-                container.PartitionKey.Paths.Add("/" + DocumentCollection.PartitionKeyProperty);
+            if (!string.IsNullOrEmpty(options?.PartitionKey)) {
+                containerProperties.PartitionKeyPath = "/" + options.PartitionKey;
             }
-            var collection = await Client.CreateDocumentCollectionIfNotExistsAsync(
-                 UriFactory.CreateDatabaseUri(DatabaseId),
-                 container,
-                 new RequestOptions {
-                     EnableScriptLogging = true,
-                     OfferThroughput = options?.ThroughputUnits
-                 }
-            );
-            await CreateSprocIfNotExistsAsync(id, BulkUpdateSprocName);
-            await CreateSprocIfNotExistsAsync(id, BulkDeleteSprocName);
-            return collection.Resource;
+            var container = await _database.CreateContainerIfNotExistsAsync(
+                containerProperties);
+
+            await CreateSprocIfNotExistsAsync(container.Container, BulkUpdateSprocName);
+            await CreateSprocIfNotExistsAsync(container.Container, BulkDeleteSprocName);
+            return container.Container;
         }
 
         internal const string BulkUpdateSprocName = "bulkUpdate";
@@ -157,48 +125,43 @@ namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
         /// <summary>
         /// Create stored procedures
         /// </summary>
-        /// <param name="collectionId"></param>
+        /// <param name="container"></param>
         /// <param name="sprocName"></param>
         /// <returns></returns>
-        private async Task CreateSprocIfNotExistsAsync(string collectionId, string sprocName) {
+        private async Task CreateSprocIfNotExistsAsync(Container container, string sprocName) {
             var assembly = GetType().Assembly;
 #if FALSE
             try {
-                var sprocUri = UriFactory.CreateStoredProcedureUri(
-                    DatabaseId, collectionId, sprocName);
-                await _client.DeleteStoredProcedureAsync(sprocUri);
+                await container.Scripts.DeleteStoredProcedureAsync(sprocName);
             }
-            catch (DocumentClientException) {}
+            catch (CosmosException) {}
 #endif
             var resource = $"{assembly.GetName().Name}.Script.{sprocName}.js";
             using (var stream = assembly.GetManifestResourceStream(resource)) {
                 if (stream == null) {
                     throw new FileNotFoundException(resource + " not found");
                 }
-                var sproc = new StoredProcedure {
-                    Id = sprocName,
-                    Body = stream.ReadAsString(Encoding.UTF8)
-                };
                 try {
-                    var sprocUri = UriFactory.CreateStoredProcedureUri(
-                        DatabaseId, collectionId, sprocName);
-                    await Client.ReadStoredProcedureAsync(sprocUri);
+                    await container.Scripts.ReadStoredProcedureAsync(sprocName);
                     return;
                 }
-                catch (DocumentClientException de) {
+                catch (CosmosException de) {
                     if (de.StatusCode != HttpStatusCode.NotFound) {
                         throw;
                     }
                 }
-                await Client.CreateStoredProcedureAsync(
-                    UriFactory.CreateDocumentCollectionUri(DatabaseId,
-                    collectionId), sproc);
+                var sproc = new Cosmos.Scripts.StoredProcedureProperties {
+                    Id = sprocName,
+                    Body = stream.ReadAsString(Encoding.UTF8)
+                };
+                await container.Scripts.CreateStoredProcedureAsync(sproc);
             }
         }
 
+        private readonly Database _database;
         private readonly ILogger _logger;
-        private readonly int? _databaseThroughput;
+     //   private readonly int? _databaseThroughput;
         private readonly ConcurrentDictionary<string, DocumentCollection> _collections;
-        private readonly IJsonSerializerSettingsProvider _jsonConfig;
+        //   private readonly IJsonSerializerSettingsProvider _jsonConfig;
     }
 }

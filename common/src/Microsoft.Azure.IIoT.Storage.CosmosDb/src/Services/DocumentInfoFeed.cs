@@ -5,8 +5,8 @@
 
 namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
     using Microsoft.Azure.IIoT.Utils;
-    using Microsoft.Azure.Documents.Linq;
-    using Microsoft.Azure.Documents;
+    using Microsoft.Azure.Cosmos.Linq;
+    using Microsoft.Azure.Cosmos;
     using Serilog;
     using System.Collections.Generic;
     using System.Linq;
@@ -25,7 +25,7 @@ namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
         /// <summary>
         /// Create feed
         /// </summary>
-        internal DocumentInfoFeed(IDocumentQuery<Document> query, ILogger logger) {
+        internal DocumentInfoFeed(FeedIterator<dynamic> query, ILogger logger) {
             _query = query ?? throw new ArgumentNullException(nameof(query));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -35,8 +35,8 @@ namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
             return await Retry.WithExponentialBackoff(_logger, ct, async () => {
                 if (_query.HasMoreResults) {
                     try {
-                        var result = await _query.ExecuteNextAsync<Document>(ct);
-                        ContinuationToken = result.ResponseContinuation;
+                        var result = await _query.ReadNextAsync(ct);
+                        ContinuationToken = result.ContinuationToken;
                         return result.Select(r => (IDocumentInfo<T>)new DocumentInfo<T>(r));
                     }
                     catch (Exception ex) {
@@ -56,10 +56,9 @@ namespace Microsoft.Azure.IIoT.Storage.CosmosDb.Services {
         /// Dispose query
         /// </summary>
         public void Dispose() {
-            _query.Dispose();
         }
 
-        private readonly IDocumentQuery<Document> _query;
+        private readonly FeedIterator<dynamic> _query;
         private readonly ILogger _logger;
     }
 }
