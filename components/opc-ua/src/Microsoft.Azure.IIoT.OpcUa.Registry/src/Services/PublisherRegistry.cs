@@ -6,9 +6,9 @@
 namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
     using Microsoft.Azure.IIoT.OpcUa.Registry.Models;
     using Microsoft.Azure.IIoT.OpcUa.Registry;
-    using Microsoft.Azure.IIoT.OpcUa.Core.Models;
     using Microsoft.Azure.IIoT.OpcUa.Publisher.Models;
     using Microsoft.Azure.IIoT.OpcUa.Publisher;
+    using Microsoft.Azure.IIoT.OpcUa.Core.Models;
     using Microsoft.Azure.IIoT.Exceptions;
     using Microsoft.Azure.IIoT.Hub.Models;
     using Microsoft.Azure.IIoT.Hub;
@@ -208,7 +208,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
                 throw new ArgumentNullException(nameof(dataSetWriter.WriterGroupId));
             }
             await AddRemoveWriterFromWriterGroupTwinAsync(
-                WriterGroupRegistryEx.ToDeviceId(writerGroupId), dataSetWriter.DataSetWriterId,
+                Models.PublisherRegistryEx.ToDeviceId(writerGroupId), dataSetWriter.DataSetWriterId,
                 dataSetWriter.IsDisabled ?? false);
         }
 
@@ -234,7 +234,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
             }
             else {
                 await AddRemoveWriterFromWriterGroupTwinAsync(
-                    WriterGroupRegistryEx.ToDeviceId(writerGroupId), dataSetWriterId,
+                    Models.PublisherRegistryEx.ToDeviceId(writerGroupId), dataSetWriterId,
                     dataSetWriter.IsDisabled != false);
             }
         }
@@ -254,7 +254,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
                 throw new ArgumentNullException(nameof(dataSetWriter.WriterGroupId));
             }
             await AddRemoveWriterFromWriterGroupTwinAsync(
-                WriterGroupRegistryEx.ToDeviceId(dataSetWriter.WriterGroupId),
+                Models.PublisherRegistryEx.ToDeviceId(dataSetWriter.WriterGroupId),
                 dataSetWriter.DataSetWriterId, true);
         }
 
@@ -294,7 +294,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
             while (true) {
                 try {
                     var twin = await _iothub.FindAsync(
-                        WriterGroupRegistryEx.ToDeviceId(writerGroup.WriterGroupId));
+                        Models.PublisherRegistryEx.ToDeviceId(writerGroup.WriterGroupId));
                     if (twin == null) {
                         _logger.Warning("Missed add group event - try recreating a disabled twin...");
                         twin = await _iothub.CreateOrUpdateAsync(
@@ -370,7 +370,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
                 _logger.Debug("Remove group {id} event - Delete twin...",
                     writerGroupId);
                 await _iothub.DeleteAsync(
-                    WriterGroupRegistryEx.ToDeviceId(writerGroupId));
+                    Models.PublisherRegistryEx.ToDeviceId(writerGroupId));
                 _logger.Debug("Remove group {id} event - Twin deleted.",
                     writerGroupId);
             }
@@ -397,7 +397,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
                     Id = deviceId,
                     Properties = new TwinPropertiesModel {
                         Desired = new Dictionary<string, VariantValue> {
-                            [WriterGroupRegistryEx.ToPropertyName(dataSetWriterId)] =
+                            [Models.PublisherRegistryEx.ToPropertyName(dataSetWriterId)] =
                                 remove ? null : DateTime.UtcNow.ToString()
                         }
                     }
@@ -431,7 +431,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
 
                 // Get registration
                 var writerGroupDevice = await _iothub.GetRegistrationAsync(
-                    WriterGroupRegistryEx.ToDeviceId(writerGroup.WriterGroupId), null, ct);
+                    Models.PublisherRegistryEx.ToDeviceId(writerGroup.WriterGroupId), null, ct);
                 if (string.IsNullOrEmpty(writerGroupDevice?.Authentication?.PrimaryKey)) {
                     // No writer group registration
                     return false;

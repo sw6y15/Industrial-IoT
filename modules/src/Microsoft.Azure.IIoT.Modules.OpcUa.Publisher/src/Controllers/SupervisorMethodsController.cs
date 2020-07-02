@@ -51,7 +51,7 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Controllers {
 
             // Fix up raw device identities back to writer group identities
             foreach (var entity in response.Entities) {
-                entity.Id = WriterGroupRegistryEx.ToWriterGroupId(entity.Id);
+                entity.Id = IIoT.OpcUa.Registry.Models.PublisherRegistryEx.ToWriterGroupId(entity.Id);
             }
             return response;
         }
@@ -73,7 +73,7 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Controllers {
                 throw new ArgumentException("not base64", nameof(secret));
             }
             // Convert to device id
-            var deviceId = WriterGroupRegistryEx.ToDeviceId(writerGroupId);
+            var deviceId = IIoT.OpcUa.Registry.Models.PublisherRegistryEx.ToDeviceId(writerGroupId);
             await _activator.ActivateAsync(deviceId, secret);
             return true;
         }
@@ -88,7 +88,7 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Controllers {
                 throw new ArgumentNullException(nameof(writerGroupId));
             }
             // Convert to device id
-            var deviceId = WriterGroupRegistryEx.ToDeviceId(writerGroupId);
+            var deviceId = IIoT.OpcUa.Registry.Models.PublisherRegistryEx.ToDeviceId(writerGroupId);
             await _activator.DeactivateAsync(deviceId);
             return true;
         }

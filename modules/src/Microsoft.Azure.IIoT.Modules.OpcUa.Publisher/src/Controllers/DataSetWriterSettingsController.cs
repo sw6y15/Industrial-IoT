@@ -33,7 +33,7 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Controllers {
             // string which allows us to log the change here also.
             //
             set {
-                var writerId = WriterGroupRegistryEx.ToDataSetWriterId(propertyName);
+                var writerId = PublisherRegistryEx.ToDataSetWriterId(propertyName);
                 try {
                     if (value.IsNull()) {
                         _writers.OnDataSetWriterRemoved(writerId);
@@ -52,7 +52,7 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Controllers {
                 }
             }
             get {
-                var writerId = WriterGroupRegistryEx.ToDataSetWriterId(propertyName);
+                var writerId = PublisherRegistryEx.ToDataSetWriterId(propertyName);
                 if (!_writers.LoadState.TryGetValue(writerId, out var result)) {
                     result = null;
                 }
@@ -74,7 +74,7 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Controllers {
         /// <inheritdoc/>
         public IEnumerable<string> GetPropertyNames() {
             return _writers.LoadState.Keys.Select(
-                dataSetWriterId => WriterGroupRegistryEx.ToPropertyName(dataSetWriterId));
+                dataSetWriterId => PublisherRegistryEx.ToPropertyName(dataSetWriterId));
         }
 
         private readonly IDataSetWriterRegistryLoader _writers;

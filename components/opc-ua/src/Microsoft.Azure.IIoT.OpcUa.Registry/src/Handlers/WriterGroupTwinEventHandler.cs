@@ -32,7 +32,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Handlers {
                 return;
             }
 
-            var writerGroupId = WriterGroupRegistryEx.ToWriterGroupId(ev.Twin.Id);
+            var writerGroupId = PublisherRegistryEx.ToWriterGroupId(ev.Twin.Id);
             if (string.IsNullOrEmpty(writerGroupId)) {
                 return;
             }

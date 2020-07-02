@@ -38,7 +38,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Clients {
             PublishedDataSetItemStateModel state) {
             _logger.OnDataSetEventStateChange(dataSetWriterId, state);
             var ev = new WriterGroupStateEventModel {
-                WriterGroupId = WriterGroupRegistryEx.ToWriterGroupId(_events.DeviceId),
+                WriterGroupId = PublisherRegistryEx.ToWriterGroupId(_events.DeviceId),
                 DataSetWriterId = dataSetWriterId,
                 EventType = PublisherStateEventType.PublishedItem,
                 LastResult = state?.LastResult,
@@ -52,7 +52,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Clients {
             string variableId, PublishedDataSetItemStateModel state) {
             _logger.OnDataSetVariableStateChange(dataSetWriterId, variableId, state);
             var ev = new WriterGroupStateEventModel {
-                WriterGroupId = WriterGroupRegistryEx.ToWriterGroupId(_events.DeviceId),
+                WriterGroupId = PublisherRegistryEx.ToWriterGroupId(_events.DeviceId),
                 DataSetWriterId = dataSetWriterId,
                 EventType = PublisherStateEventType.PublishedItem,
                 LastResult = state?.LastResult,
@@ -67,7 +67,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Clients {
             PublishedDataSetSourceStateModel state) {
             _logger.OnDataSetWriterStateChange(dataSetWriterId, state);
             var ev = new WriterGroupStateEventModel {
-                WriterGroupId = WriterGroupRegistryEx.ToWriterGroupId(_events.DeviceId),
+                WriterGroupId = PublisherRegistryEx.ToWriterGroupId(_events.DeviceId),
                 DataSetWriterId = dataSetWriterId,
                 EventType = PublisherStateEventType.Source,
                 LastResult = state?.LastResult,

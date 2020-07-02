@@ -62,7 +62,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Models {
             if (update?.WriterGroupId != null &&
                 update.WriterGroupId != existing?.WriterGroupId) {
                 twin.Tags.Add(nameof(WriterGroupRegistration.WriterGroupId), update.WriterGroupId);
-                twin.Id = WriterGroupRegistryEx.ToDeviceId(update.WriterGroupId);
+                twin.Id = PublisherRegistryEx.ToDeviceId(update.WriterGroupId);
             }
 
             if (update?.SiteId != existing?.SiteId) {
@@ -265,7 +265,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Models {
             return new WriterGroupRegistration {
                 IsDisabled = disabled,
                 WriterGroupId = model.WriterGroupId,
-                DeviceId = WriterGroupRegistryEx.ToDeviceId(model.WriterGroupId),
+                DeviceId = PublisherRegistryEx.ToDeviceId(model.WriterGroupId),
                 SiteId = model.SiteId,
                 BatchSize = model.BatchSize,
                 PublishingInterval = model.PublishingInterval,
