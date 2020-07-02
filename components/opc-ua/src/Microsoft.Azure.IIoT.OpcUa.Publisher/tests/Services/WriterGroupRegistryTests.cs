@@ -25,6 +25,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
     using Autofac;
     using Moq;
     using System.Threading;
+    using Opc.Ua;
 
     /// <summary>
     /// Certificate Issuer tests
@@ -100,16 +101,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                     return v
                         .Where(o => o.Value["WriterGroupId"] == writerGroupId.ToString())
                         .Where(o => o.Value["ClassType"] == "DataSetWriter");
-                }
-
-                id = q
-                    .Replace("SELECT * FROM r WHERE r.DataSetWriterId = '", "")
-                    .Replace("' AND r.ClassType = 'DataSetEntity'", "");
-                if (Guid.TryParse(id, out var dataSetWriterid)) {
-                    // Get variables and entities
-                    return v
-                        .Where(o => o.Value["DataSetWriterId"] == dataSetWriterid.ToString())
-                        .Where(o => o.Value["ClassType"] == "DataSetEntity");
                 }
                 throw new AssertActualExpectedException(null, q, "Query");
             })) {
@@ -289,6 +280,79 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                 // Assert
                 await Assert.ThrowsAsync<ResourceNotFoundException>(() => groups.GetWriterGroupAsync(
                     group.WriterGroupId));
+            }
+        }
+
+        [Fact]
+        public async Task AddWriterToDefaultGroupTestAsync() {
+
+            var writerGroupId = "fakesite";
+            using (var mock = Setup((v, q) => {
+                var id = q
+                    .Replace("SELECT * FROM r WHERE r.DataSetWriterId = '", "")
+                    .Replace("' AND r.ClassType = 'DataSetEntity' AND r.Type = 'Variable'", "");
+                if (Guid.TryParse(id, out var dataSetWriterid)) {
+                    // Get variables
+                    return v
+                        .Where(o => o.Value["DataSetWriterId"] == dataSetWriterid.ToString())
+                        .Where(o => o.Value["ClassType"] == "DataSetEntity")
+                        .Where(o => o.Value["Type"] == "Variable");
+                }
+
+                var expected = $"SELECT * FROM r WHERE r.WriterGroupId = '{writerGroupId}' AND " +
+                    "r.IsDisabled = false AND r.ClassType = 'DataSetWriter'";
+                if (expected == q) {
+                    // Get writers
+                    return v
+                        .Where(o => o.Value["WriterGroupId"] == writerGroupId)
+                        .Where(o => o.Value["ClassType"] == "DataSetWriter")
+                        .Where(o => o.Value["IsDisabled"] == false);
+                }
+
+                throw new AssertActualExpectedException(null, q, "Query");
+            })) {
+
+                IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
+                IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
+                IWriterGroupRepository store = mock.Create<WriterGroupDatabase>();
+
+                // Act
+                var result2 = await service.AddDataSetWriterAsync(new DataSetWriterAddRequestModel {
+                    EndpointId = "endpoint1",
+                    DataSetName = "Test",
+                    KeyFrameInterval = TimeSpan.FromSeconds(1),
+                    SubscriptionSettings = new PublishedDataSetSourceSettingsModel {
+                        Priority = 1
+                    }
+                });
+
+                var writer = await service.GetDataSetWriterAsync(result2.DataSetWriterId);
+
+                // Assert
+                Assert.NotNull(writer);
+                Assert.Equal(result2.DataSetWriterId, writer.DataSetWriterId);
+                Assert.NotNull(writer.DataSet);
+                Assert.NotNull(writer.DataSet.DataSetSource);
+                Assert.NotNull(writer.DataSet.DataSetSource.Connection);
+                Assert.NotNull(writer.DataSet.DataSetSource.Connection.Endpoint);
+                Assert.Equal("fakeurl", writer.DataSet.DataSetSource.Connection.Endpoint.Url);
+                Assert.Equal(TimeSpan.FromSeconds(1), writer.KeyFrameInterval);
+                Assert.NotNull(writer.DataSet.DataSetSource.SubscriptionSettings);
+                Assert.Equal((byte)1, writer.DataSet.DataSetSource.SubscriptionSettings.Priority);
+
+                // Act
+                var group = await groups.GetWriterGroupAsync(writerGroupId);
+
+                // Assert
+                Assert.NotNull(group);
+                Assert.Equal(writerGroupId, group.WriterGroupId);
+                Assert.Equal("fakesite", group.SiteId);
+                Assert.Single(group.DataSetWriters);
+                Assert.Collection(group.DataSetWriters, writer2 => {
+                    Assert.Equal(writer.DataSetWriterId, writer2.DataSetWriterId);
+                    Assert.Equal("fakeurl", writer2.DataSet.DataSetSource.Connection.Endpoint.Url);
+                    Assert.Equal((byte)1, writer2.DataSet.DataSetSource.SubscriptionSettings.Priority);
+                });
             }
         }
 
@@ -485,7 +549,112 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
         }
 
         [Fact]
-        public async Task AddWriterWithDefaultGroupTestAsync() {
+        public async Task AddVariablesToDataSetWriterTestAsync() {
+
+            using (var mock = Setup((v, q) => {
+                var id = q
+                    .Replace("SELECT * FROM r WHERE r.DataSetWriterId = '", "")
+                    .Replace("' AND r.ClassType = 'DataSetEntity' AND r.Type = 'Variable'", "");
+                if (Guid.TryParse(id, out var dataSetWriterid)) {
+                    // Get variables
+                    return v
+                        .Where(o => o.Value["DataSetWriterId"] == dataSetWriterid.ToString())
+                        .Where(o => o.Value["ClassType"] == "DataSetEntity")
+                        .Where(o => o.Value["Type"] == "Variable");
+                }
+                id = q
+                    .Replace("SELECT * FROM r WHERE r.DataSetWriterId = '", "")
+                    .Replace("' AND r.ClassType = 'DataSetEntity'", "");
+                if (Guid.TryParse(id, out dataSetWriterid)) {
+                    // Get variables and entities
+                    return v
+                        .Where(o => o.Value["DataSetWriterId"] == dataSetWriterid.ToString())
+                        .Where(o => o.Value["ClassType"] == "DataSetEntity");
+                }
+
+                id = q
+                    .Replace("SELECT * FROM r WHERE r.WriterGroupId = '", "")
+                    .Replace("' AND r.ClassType = 'DataSetWriter'", "");
+                if (Guid.TryParse(id, out var writerGroupId)) {
+                    // Get writers not disabled
+                    return v
+                        .Where(o => o.Value["WriterGroupId"] == writerGroupId.ToString())
+                        .Where(o => o.Value["ClassType"] == "DataSetWriter");
+                }
+                throw new AssertActualExpectedException(null, q, "Query");
+            })) {
+
+                IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
+                IDataSetBatchOperations batch = mock.Create<WriterGroupRegistry>();
+                IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
+                IWriterGroupRepository store = mock.Create<WriterGroupDatabase>();
+
+                // Act
+                var group = await groups.AddWriterGroupAsync(new WriterGroupAddRequestModel {
+                    Name = "Test",
+                    SiteId = "fakesite" // See below
+                });
+
+                var writer = await service.AddDataSetWriterAsync(new DataSetWriterAddRequestModel {
+                    EndpointId = "endpoint1",
+                    DataSetName = "Test",
+                    KeyFrameInterval = TimeSpan.FromSeconds(1),
+                    SubscriptionSettings = new PublishedDataSetSourceSettingsModel {
+                        Priority = 1
+                    },
+                    WriterGroupId = group.WriterGroupId
+                });
+
+                var result = await batch.AddVariablesToDataSetWriterAsync(writer.DataSetWriterId,
+                    new DataSetAddVariableBatchRequestModel {
+                        DataSetPublishingInterval = TimeSpan.FromSeconds(1),
+                        Variables = new List<DataSetAddVariableRequestModel> {
+                            new DataSetAddVariableRequestModel {
+                                PublishedVariableNodeId = "i=2554",
+                                HeartbeatInterval = TimeSpan.FromDays(1)
+                            },
+                            new DataSetAddVariableRequestModel {
+                                PublishedVariableNodeId = "i=2555",
+                                HeartbeatInterval = TimeSpan.FromDays(1)
+                            },
+                            new DataSetAddVariableRequestModel {
+                                PublishedVariableNodeId = "i=2556",
+                                HeartbeatInterval = TimeSpan.FromDays(1)
+                            }
+                        }
+                    });
+
+                var found = await service.ListAllDataSetVariablesAsync(writer.DataSetWriterId);
+
+                // Assert
+                Assert.Equal(3, found.Count);
+                Assert.All(found, v => {
+                    Assert.Null(v.PublishedVariableDisplayName);
+                    Assert.Equal(TimeSpan.FromDays(1), v.HeartbeatInterval);
+                    Assert.Contains(result.Results, f => f.Id == v.Id);
+                });
+
+                var remove = batch.RemoveVariablesFromDataSetWriterAsync(writer.DataSetWriterId,
+                    new DataSetRemoveVariableBatchRequestModel {
+                        Variables = new List<DataSetRemoveVariableRequestModel> {
+                            new DataSetRemoveVariableRequestModel {
+                                PublishedVariableNodeId = "i=2554"
+                            },
+                            new DataSetRemoveVariableRequestModel {
+                                PublishedVariableNodeId = "i=2555"
+                            }
+                        }
+                    });
+
+                // Assert
+                found = await service.ListAllDataSetVariablesAsync(writer.DataSetWriterId);
+                Assert.NotNull(found);
+                Assert.Single(found);
+            }
+        }
+
+        [Fact]
+        public async Task AddVariablesToDefaultDataSetWriterTestAsync() {
 
             var dataSetWriterId = "endpoint1";
             var writerGroupId = "fakesite";
@@ -537,6 +706,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                 Assert.NotNull(writer.DataSet.DataSetSource.Connection);
                 Assert.NotNull(writer.DataSet.DataSetSource.Connection.Endpoint);
                 Assert.Equal("fakeurl", writer.DataSet.DataSetSource.Connection.Endpoint.Url);
+                Assert.NotNull(writer.DataSet.DataSetSource.SubscriptionSettings);
+                Assert.Equal(TimeSpan.FromSeconds(1), writer.DataSet.DataSetSource.SubscriptionSettings.PublishingInterval);
 
                 // Act
                 var found = await service.ListAllDataSetVariablesAsync(writer.DataSetWriterId);
@@ -561,6 +732,35 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                     Assert.Equal(writer.DataSetWriterId, writer2.DataSetWriterId);
                     Assert.Equal("fakeurl", writer2.DataSet.DataSetSource.Connection.Endpoint.Url);
                 });
+
+                // Act
+                result = await batch.AddVariablesToDefaultDataSetWriterAsync(dataSetWriterId,
+                    new DataSetAddVariableBatchRequestModel {
+                        DataSetPublishingInterval = TimeSpan.FromSeconds(2),
+                        Variables = LinqEx.Repeat(() => new DataSetAddVariableRequestModel {
+                            PublishedVariableNodeId = "i=2553",
+                            HeartbeatInterval = TimeSpan.FromDays(3)
+                        }, 10).ToList()
+                    });
+
+                writer = await service.GetDataSetWriterAsync(dataSetWriterId);
+
+                // Assert
+                Assert.NotNull(writer);
+                Assert.Equal(dataSetWriterId, writer.DataSetWriterId);
+                Assert.NotNull(writer.DataSet);
+                Assert.NotNull(writer.DataSet.DataSetSource);
+                Assert.NotNull(writer.DataSet.DataSetSource.Connection);
+                Assert.NotNull(writer.DataSet.DataSetSource.Connection.Endpoint);
+                Assert.Equal("fakeurl", writer.DataSet.DataSetSource.Connection.Endpoint.Url);
+                Assert.NotNull(writer.DataSet.DataSetSource.SubscriptionSettings);
+                Assert.Equal(TimeSpan.FromSeconds(2), writer.DataSet.DataSetSource.SubscriptionSettings.PublishingInterval);
+
+                // Act
+                found = await service.ListAllDataSetVariablesAsync(writer.DataSetWriterId);
+
+                // Assert
+                Assert.Equal(2, found.Count);
             }
         }
 
