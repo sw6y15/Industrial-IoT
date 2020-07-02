@@ -170,26 +170,22 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
 
         /// <inheritdoc/>
         public async Task UpdateWriterGroupStateAsync(string writerGroupId,
-            WriterGroupState? state,
-            PublisherOperationContextModel context, CancellationToken ct) {
+            WriterGroupState? state, PublisherOperationContextModel context, CancellationToken ct) {
             if (string.IsNullOrEmpty(writerGroupId)) {
                 throw new ArgumentNullException(nameof(writerGroupId));
             }
             var updated = false;
             var lastResultChange = context?.Time ?? DateTime.UtcNow;
             var group = await _groups.UpdateAsync(writerGroupId, existing => {
-                var existingState = existing.State?.State;
-                if (existingState != state) {
+                var existingState = existing.State?.State ?? WriterGroupState.Disabled;
+                var updatedState = state ?? WriterGroupState.Disabled;
+                if (existingState != WriterGroupState.Disabled &&
+                    existingState != updatedState) {
                     updated = true;
-                    if (state == null) {
-                        existing.State = null;
-                    }
-                    else {
-                        existing.State = new WriterGroupStateModel {
-                            State = state,
-                            LastStateChange = lastResultChange
-                        };
-                    }
+                    existing.State = new WriterGroupStateModel {
+                        State = updatedState,
+                        LastStateChange = lastResultChange
+                    };
                 }
                 return Task.FromResult(updated);
             }, ct);
@@ -305,7 +301,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
         /// <param name="ct"></param>
         /// <returns></returns>
         private async Task EnableDataSetWriterAsync(string dataSetWriterId, bool enable,
-             PublisherOperationContextModel context, CancellationToken ct = default) {
+            PublisherOperationContextModel context, CancellationToken ct = default) {
             var updated = true;
             var writer = await _writers.UpdateAsync(dataSetWriterId, existing => {
                 if (existing.IsDisabled == true && enable) {

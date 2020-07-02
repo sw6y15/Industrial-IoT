@@ -18,13 +18,13 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Models {
         /// </summary>
         [DataMember(Name = "state", Order = 0,
             EmitDefaultValue = false)]
-        public WriterGroupState? State { get; set; }
+        public WriterGroupState State { get; set; }
 
         /// <summary>
         /// Last state change
         /// </summary>
         [DataMember(Name = "lastStateChange", Order = 1,
             EmitDefaultValue = false)]
-        public DateTime? LastStateChange { get; set; }
+        public DateTime LastStateChange { get; set; }
     }
 }

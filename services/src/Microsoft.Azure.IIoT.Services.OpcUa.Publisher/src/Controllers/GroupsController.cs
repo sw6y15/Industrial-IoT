@@ -78,6 +78,48 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher.Controllers {
         }
 
         /// <summary>
+        /// Activate writer group
+        /// </summary>
+        /// <remarks>
+        /// Instructs the publisher to emit messages for the writer group.
+        /// </remarks>
+        /// <param name="writerGroupId">The writer group identifier</param>
+        /// <returns>A writer group</returns>
+        [HttpPost("{writerGroupId}/activate")]
+        public async Task ActivateWriterGroupAsync(
+            string writerGroupId) {
+            if (string.IsNullOrEmpty(writerGroupId)) {
+                throw new ArgumentNullException(nameof(writerGroupId));
+            }
+            await _groups.ActivateWriterGroupAsync(writerGroupId,
+                new PublisherOperationContextModel {
+                    Time = DateTime.UtcNow,
+                    AuthorityId = HttpContext.User.Identity.Name
+                });
+        }
+
+        /// <summary>
+        /// Dactivate writer group
+        /// </summary>
+        /// <remarks>
+        /// Stops publishing network messages for the writer group.
+        /// </remarks>
+        /// <param name="writerGroupId">The writer group identifier</param>
+        /// <returns>A writer group</returns>
+        [HttpPost("{writerGroupId}/deactivate")]
+        public async Task DeactivateWriterGroupAsync(
+            string writerGroupId) {
+            if (string.IsNullOrEmpty(writerGroupId)) {
+                throw new ArgumentNullException(nameof(writerGroupId));
+            }
+            await _groups.DeactivateWriterGroupAsync(writerGroupId,
+                new PublisherOperationContextModel {
+                    Time = DateTime.UtcNow,
+                    AuthorityId = HttpContext.User.Identity.Name
+                });
+        }
+
+        /// <summary>
         /// Updates a writer group
         /// </summary>
         /// <remarks>

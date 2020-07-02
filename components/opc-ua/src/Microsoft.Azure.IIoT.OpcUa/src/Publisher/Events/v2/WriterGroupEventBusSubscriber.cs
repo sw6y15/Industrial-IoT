@@ -55,6 +55,18 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Events.v2 {
                             eventData.Context, eventData.WriterGroup)
                         .ContinueWith(t => Task.CompletedTask)));
                     break;
+                case WriterGroupEventType.Activated:
+                    await Task.WhenAll(_listeners
+                        .Select(l => l.OnWriterGroupActivatedAsync(
+                            eventData.Context, eventData.WriterGroup)
+                        .ContinueWith(t => Task.CompletedTask)));
+                    break;
+                case WriterGroupEventType.Deactivated:
+                    await Task.WhenAll(_listeners
+                        .Select(l => l.OnWriterGroupDeactivatedAsync(
+                            eventData.Context, eventData.WriterGroup)
+                        .ContinueWith(t => Task.CompletedTask)));
+                    break;
                 case WriterGroupEventType.Removed:
                     await Task.WhenAll(_listeners
                         .Select(l => l.OnWriterGroupRemovedAsync(

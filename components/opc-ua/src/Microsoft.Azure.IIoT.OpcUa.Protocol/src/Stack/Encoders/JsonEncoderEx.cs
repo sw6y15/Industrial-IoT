@@ -595,14 +595,18 @@ namespace Opc.Ua.Encoders {
                 var type = vararray[0].TypeInfo?.BuiltInType;
                 var rank = vararray[0].TypeInfo?.ValueRank;
 
-                // TODO fails when different ranks are in use in array
-                if (vararray.All(v =>
-                    v.TypeInfo?.BuiltInType == type)) {
-                    // Demote and encode as simple array
-                    variant = new TypeInfo(type ?? BuiltInType.Null, 1)
-                        .CreateVariant(vararray
-                            .Select(v => v.Value)
-                            .ToArray());
+                if (vararray.All(v => v.TypeInfo?.BuiltInType == type)) {
+                    try {
+                        // Demote and encode as simple array
+                        variant = new TypeInfo(type ?? BuiltInType.Null, 1)
+                            .CreateVariant(vararray
+                                .Select(v => v.Value)
+                                .ToArray());
+                    }
+                    catch {
+                        // Fails when different ranks are in use in array
+                        variant = value;
+                    }
                 }
             }
 

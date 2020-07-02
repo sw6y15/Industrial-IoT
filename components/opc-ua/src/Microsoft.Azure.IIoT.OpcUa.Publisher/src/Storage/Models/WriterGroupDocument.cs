@@ -128,13 +128,13 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
         /// Last reported state
         /// </summary>
         [DataMember]
-        public WriterGroupState? LastState { get; set; }
+        public WriterGroupState LastState { get; set; }
 
         /// <summary>
         /// Last state change
         /// </summary>
         [DataMember]
-        public DateTime? LastStateChange { get; set; }
+        public DateTime LastStateChange { get; set; }
 
         /// <summary>
         /// Updated at

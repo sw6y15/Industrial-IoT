@@ -31,6 +31,13 @@ namespace Microsoft.Azure.IIoT.Hub.Models {
         public string ModuleId { get; set; }
 
         /// <summary>
+        /// Status of the device
+        /// </summary>
+        [DataMember(Name = "status",
+            EmitDefaultValue = false)]
+        public string Status { get; set; }
+
+        /// <summary>
         /// Authentication information
         /// </summary>
         [DataMember(Name = "authentication")]

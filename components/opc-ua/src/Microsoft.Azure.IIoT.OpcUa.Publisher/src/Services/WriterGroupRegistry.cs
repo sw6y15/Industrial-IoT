@@ -7,6 +7,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
     using Microsoft.Azure.IIoT.OpcUa.Publisher;
     using Microsoft.Azure.IIoT.OpcUa.Publisher.Models;
     using Microsoft.Azure.IIoT.OpcUa.Registry;
+    using Microsoft.Azure.IIoT.OpcUa.Registry.Models;
     using Microsoft.Azure.IIoT.OpcUa.Core.Models;
     using Microsoft.Azure.IIoT.Serializers;
     using Microsoft.Azure.IIoT.Exceptions;
@@ -17,7 +18,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
     using System.Collections.Generic;
     using System.Linq;
     using System;
-    using Microsoft.Azure.IIoT.OpcUa.Registry.Models;
 
     /// <summary>
     /// PubSub configuration service manages the Publish configuration surface
@@ -307,6 +307,18 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                 GenerationId = result.GenerationId,
                 WriterGroupId = result.WriterGroupId
             };
+        }
+
+        /// <inheritdoc/>
+        public Task ActivateWriterGroupAsync(string writerGroupId,
+            PublisherOperationContextModel context, CancellationToken ct) {
+            return ActivateDeactivateWriterGroupAsync(writerGroupId, true, context, ct);
+        }
+
+        /// <inheritdoc/>
+        public Task DeactivateWriterGroupAsync(string writerGroupId,
+            PublisherOperationContextModel context, CancellationToken ct) {
+            return ActivateDeactivateWriterGroupAsync(writerGroupId, false, context, ct);
         }
 
         /// <inheritdoc/>
@@ -960,6 +972,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                 // Group added
                 await _groupEvents.NotifyAllAsync(
                     l => l.OnWriterGroupAddedAsync(context, group));
+
+                // Always auto-activate publishing of default groups.
+                await ActivateDeactivateWriterGroupAsync(siteId, true, context, ct);
             }
             return group;
         }
@@ -1050,6 +1065,57 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                 }
             }
             return writer;
+        }
+
+        /// <summary>
+        /// Helper to update the writer group state
+        /// </summary>
+        /// <param name="writerGroupId"></param>
+        /// <param name="activate"></param>
+        /// <param name="context"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        private async Task ActivateDeactivateWriterGroupAsync(string writerGroupId,
+            bool activate, PublisherOperationContextModel context, CancellationToken ct) {
+            if (string.IsNullOrEmpty(writerGroupId)) {
+                throw new ArgumentNullException(nameof(writerGroupId));
+            }
+            var updated = false;
+            var lastResultChange = context?.Time ?? DateTime.UtcNow;
+            var group = await _groups.UpdateAsync(writerGroupId, existing => {
+                var existingState = existing.State?.State ?? WriterGroupState.Disabled;
+                updated = false;
+                if (existingState == WriterGroupState.Disabled && activate) {
+                    // Activate
+                    updated = true;
+                    existing.State = new WriterGroupStateModel {
+                        State = WriterGroupState.Pending,
+                        LastStateChange = lastResultChange
+                    };
+                }
+                else if (existingState != WriterGroupState.Disabled && !activate) {
+                    // Deactivate
+                    existing.State = new WriterGroupStateModel {
+                        State = WriterGroupState.Disabled,
+                        LastStateChange = lastResultChange
+                    };
+                    updated = true;
+                }
+                return Task.FromResult(updated);
+            }, ct);
+            if (updated) {
+                // If updated notify about activation or deactivation
+                if (activate) {
+                    await _groupEvents.NotifyAllAsync(
+                        l => l.OnWriterGroupActivatedAsync(context, group));
+                }
+                else {
+                    await _groupEvents.NotifyAllAsync(
+                        l => l.OnWriterGroupDeactivatedAsync(context, group));
+                }
+                await _groupEvents.NotifyAllAsync(
+                    l => l.OnWriterGroupStateChangeAsync(context, group));
+            }
         }
 
         private const int kMaxBatchSize = 1000;

@@ -157,6 +157,18 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Clients {
         }
 
         /// <inheritdoc/>
+        public async Task ActivateWriterGroupAsync(string writerGroupId,
+            PublisherOperationContextModel context, CancellationToken ct) {
+            await _client.ActivateWriterGroupAsync(writerGroupId, ct);
+        }
+
+        /// <inheritdoc/>
+        public async Task DeactivateWriterGroupAsync(string writerGroupId,
+            PublisherOperationContextModel context, CancellationToken ct) {
+            await _client.DeactivateWriterGroupAsync(writerGroupId, ct);
+        }
+
+        /// <inheritdoc/>
         public async Task<WriterGroupModel> GetWriterGroupAsync(string writerGroupId,
             CancellationToken ct) {
             var result = await _client.GetWriterGroupAsync(writerGroupId, ct);

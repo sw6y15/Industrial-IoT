@@ -5,6 +5,8 @@
 
 namespace Microsoft.Azure.IIoT.OpcUa.Publisher {
     using Microsoft.Azure.IIoT.OpcUa.Publisher.Models;
+    using System.Collections;
+    using System.Collections.Generic;
     using System.Threading.Tasks;
 
     /// <summary>
@@ -37,6 +39,24 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher {
         /// <param name="writerGroup"></param>
         /// <returns></returns>
         Task OnWriterGroupStateChangeAsync(PublisherOperationContextModel context,
+            WriterGroupInfoModel writerGroup);
+
+        /// <summary>
+        /// Called when group was activated
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="writerGroup"></param>
+        /// <returns></returns>
+        Task OnWriterGroupActivatedAsync(PublisherOperationContextModel context,
+            WriterGroupInfoModel writerGroup);
+
+        /// <summary>
+        /// Called when group was deactivated
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="writerGroup"></param>
+        /// <returns></returns>
+        Task OnWriterGroupDeactivatedAsync(PublisherOperationContextModel context,
             WriterGroupInfoModel writerGroup);
 
         /// <summary>

@@ -308,6 +308,9 @@ namespace Microsoft.Azure.IIoT.Hub.Mock {
                 if (Device.ConnectionState == null) {
                     Device.ConnectionState = "Disconnected";
                 }
+                if (Device.Status == null) {
+                    Device.Status = "enabled";
+                }
                 if (Twin.ConnectionState == null) {
                     Twin.ConnectionState = "Disconnected";
                 }
@@ -440,7 +443,25 @@ namespace Microsoft.Azure.IIoT.Hub.Mock {
                         Twin.Properties.Desired, twin.Properties?.Desired);
                     Twin.Properties.Reported = Merge(
                         Twin.Properties.Reported, twin.Properties?.Reported);
-                    Twin.LastActivityTime = DateTime.UtcNow;
+
+                    if (twin.StatusReason != null) {
+                        Twin.StatusReason = twin.StatusReason;
+                    }
+                    if (twin.ConnectionState != null) {
+                        Device.ConnectionState = Twin.ConnectionState =
+                            twin.ConnectionState;
+                    }
+                    var now = DateTime.UtcNow;
+                    if (twin.Status != null) {
+                        Device.Status = Twin.Status = twin.Status.ToLowerInvariant();
+                        Twin.StatusUpdatedTime = now;
+                        if (Device.IsDisabled() ?? false) {
+                            Connection = null;
+                            Device.ConnectionState = Twin.ConnectionState =
+                                "Disconnected";
+                        }
+                    }
+                    Twin.LastActivityTime = now;
                     Twin.Etag = Device.Etag = Guid.NewGuid().ToString();
                 }
             }

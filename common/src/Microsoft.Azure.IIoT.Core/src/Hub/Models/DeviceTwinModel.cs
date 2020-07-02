@@ -64,7 +64,7 @@ namespace Microsoft.Azure.IIoT.Hub.Models {
         public long? Version { get; set; }
 
         /// <summary>
-        /// Gets the corresponding Device's Status.
+        /// Gets or sets the corresponding Device's Status.
         /// </summary>
         [DataMember(Name = "status",
             EmitDefaultValue = false)]

@@ -258,11 +258,13 @@ namespace Microsoft.Azure.IIoT.Hub.Mock.SqlParser {
                     return (t, s) => GetByPath(t.Properties, s);
                 case "capabilities":
                     return (t, s) => GetByPath(t.Capabilities, s);
+                case "connectionstate":
+                    return (t, s) => GetByPath(t.ConnectionState, s);
+                case "status":
+                    return (t, s) => GetByPath(t.Status, s);
                 case "configurations":
                     // TODO
                     return (t, s) => null;
-                case "connectionstate":
-                    return (t, s) => GetByPath(t.ConnectionState, s);
                 default:
                     return (t, s) => null;
             }

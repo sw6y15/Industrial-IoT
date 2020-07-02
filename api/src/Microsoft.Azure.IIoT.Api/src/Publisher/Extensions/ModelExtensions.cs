@@ -2180,7 +2180,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Models {
                 return null;
             }
             return new WriterGroupStateModel {
-                State = (OpcUa.Publisher.WriterGroupState)model.State,
+                State = (OpcUa.Publisher.Models.WriterGroupState)model.State,
                 LastStateChange = model.LastStateChange
             };
         }
@@ -2232,6 +2232,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Models {
                 Priority = model.Priority,
                 Name = model.Name,
                 MessageType = (NetworkMessageType?)model.MessageType,
+                State = (WriterGroupState?)model.State,
                 GroupVersion = model.GroupVersion,
                 SiteId = model.SiteId
             };
@@ -2250,6 +2251,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Models {
                 Priority = model.Priority,
                 Name = model.Name,
                 MessageType = (OpcUa.Publisher.Models.NetworkMessageType?)model.MessageType,
+                State = (OpcUa.Publisher.Models.WriterGroupState?)model.State,
                 GroupVersion = model.GroupVersion,
                 SiteId = model.SiteId
             };

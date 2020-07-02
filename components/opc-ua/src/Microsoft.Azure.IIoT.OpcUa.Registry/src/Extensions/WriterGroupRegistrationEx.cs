@@ -41,6 +41,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Models {
                 Id = (existing?.DeviceId ?? update?.DeviceId)
                     ?? throw new ArgumentException("DeviceId must not be null"),
                 Etag = existing?.Etag,
+                Status = update?.IsDisabled == null ? null :
+                    update.IsDisabled.Value ? "disabled" : "enabled",
                 Tags = new Dictionary<string, VariantValue>(),
                 Properties = new TwinPropertiesModel {
                     Desired = new Dictionary<string, VariantValue>()

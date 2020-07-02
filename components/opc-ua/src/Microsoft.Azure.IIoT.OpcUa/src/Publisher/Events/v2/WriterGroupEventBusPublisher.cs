@@ -46,6 +46,20 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Events.v2 {
         }
 
         /// <inheritdoc/>
+        public Task OnWriterGroupActivatedAsync(PublisherOperationContextModel context,
+            WriterGroupInfoModel writerGroup) {
+            return _bus.PublishAsync(Wrap(WriterGroupEventType.Activated, context,
+                writerGroup.WriterGroupId, writerGroup));
+        }
+
+        /// <inheritdoc/>
+        public Task OnWriterGroupDeactivatedAsync(PublisherOperationContextModel context,
+            WriterGroupInfoModel writerGroup) {
+            return _bus.PublishAsync(Wrap(WriterGroupEventType.Deactivated, context,
+                writerGroup.WriterGroupId, writerGroup));
+        }
+
+        /// <inheritdoc/>
         public Task OnWriterGroupRemovedAsync(PublisherOperationContextModel context,
             string writerGroupId) {
             return _bus.PublishAsync(Wrap(WriterGroupEventType.Removed, context,

@@ -5,7 +5,6 @@
 
 namespace Microsoft.Azure.IIoT.OpcUa.Publisher {
     using Microsoft.Azure.IIoT.OpcUa.Publisher.Models;
-    using Microsoft.Azure.IIoT.OpcUa.Registry.Models;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -30,7 +29,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher {
         /// Read full writer group model which includes all
         /// writers and dataset members if there are any.
         /// </summary>
-        /// <param name="writerGroupId">The writerGroupId</param>
+        /// <param name="writerGroupId">The writer group</param>
         /// <param name="ct"></param>
         /// <returns></returns>
         Task<WriterGroupModel> GetWriterGroupAsync(
@@ -40,13 +39,24 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher {
         /// Update an existing application, e.g. server
         /// certificate, or additional capabilities.
         /// </summary>
-        /// <param name="writerGroupId">The writerGroupId</param>
+        /// <param name="writerGroupId">The writer group</param>
         /// <param name="request"></param>
         /// <param name="context"></param>
         /// <param name="ct"></param>
         /// <returns></returns>
         Task UpdateWriterGroupAsync(string writerGroupId,
             WriterGroupUpdateRequestModel request,
+            PublisherOperationContextModel context = null,
+            CancellationToken ct = default);
+
+        /// <summary>
+        /// Activate a writer group setting the state to pending.
+        /// </summary>
+        /// <param name="writerGroupId">The writer group</param>
+        /// <param name="context"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        Task ActivateWriterGroupAsync(string writerGroupId,
             PublisherOperationContextModel context = null,
             CancellationToken ct = default);
 
@@ -72,6 +82,17 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher {
         /// <returns></returns>
         Task<WriterGroupInfoListModel> QueryWriterGroupsAsync(
             WriterGroupInfoQueryModel query, int? pageSize = null,
+            CancellationToken ct = default);
+
+        /// <summary>
+        /// Suspend the writer group operation.
+        /// </summary>
+        /// <param name="writerGroupId">The writer group</param>
+        /// <param name="context"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        Task DeactivateWriterGroupAsync(string writerGroupId,
+            PublisherOperationContextModel context = null,
             CancellationToken ct = default);
 
         /// <summary>

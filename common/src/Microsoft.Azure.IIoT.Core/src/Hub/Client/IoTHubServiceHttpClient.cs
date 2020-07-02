@@ -310,6 +310,7 @@ namespace Microsoft.Azure.IIoT.Hub.Client {
                 Etag = (string)result["etag"],
                 Id = (string)result["deviceId"],
                 ModuleId = (string)result["moduleId"],
+                Status = ((string)result["status"])?.ToLowerInvariant(),
                 ConnectionState = (string)result["connectionState"],
                 Authentication = new DeviceAuthenticationModel {
                     PrimaryKey = (string)result["authentication"]["symmetricKey"]["primaryKey"],

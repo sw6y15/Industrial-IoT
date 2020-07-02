@@ -61,16 +61,16 @@ namespace Opc.Ua {
                         return Variant.Null; // Matrix or scalar
                     }
                 }
-                else if (value is object[] boxed) {
+                else if (value is Array arr) {
                     try {
-                        var array = Array.CreateInstance(
-                            TypeInfo.GetSystemType(typeInfo.BuiltInType, -1), boxed.Length);
-                        Array.Copy(boxed, array, boxed.Length);
-                        value = array;
+                        var unboxed = Array.CreateInstance(
+                            TypeInfo.GetSystemType(typeInfo.BuiltInType, -1), arr.Length);
+                        Array.Copy(arr, unboxed, arr.Length);
+                        value = unboxed;
                     }
                     catch (Exception ex) {
                         aex.Add(ex);
-                        value = boxed;
+                        value = arr;
                     }
                 }
                 if (typeInfo.ValueRank >= 2) {

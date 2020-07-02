@@ -338,6 +338,30 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Clients {
         }
 
         /// <inheritdoc/>
+        public async Task ActivateWriterGroupAsync(string writerGroupId, CancellationToken ct ) {
+            if (string.IsNullOrEmpty(writerGroupId)) {
+                throw new ArgumentNullException(nameof(writerGroupId));
+            }
+            var request = _httpClient.NewRequest($"{_serviceUri}/v2/groups/{writerGroupId}/activate",
+                Resource.Platform);
+            _serializer.SetAcceptHeaders(request);
+            var response = await _httpClient.PostAsync(request, ct).ConfigureAwait(false);
+            response.Validate();
+        }
+
+        /// <inheritdoc/>
+        public async Task DeactivateWriterGroupAsync(string writerGroupId, CancellationToken ct) {
+            if (string.IsNullOrEmpty(writerGroupId)) {
+                throw new ArgumentNullException(nameof(writerGroupId));
+            }
+            var request = _httpClient.NewRequest($"{_serviceUri}/v2/groups/{writerGroupId}/deactivate",
+                Resource.Platform);
+            _serializer.SetAcceptHeaders(request);
+            var response = await _httpClient.PostAsync(request, ct).ConfigureAwait(false);
+            response.Validate();
+        }
+
+        /// <inheritdoc/>
         public async Task<WriterGroupInfoListApiModel> ListWriterGroupsAsync(
             string continuation, int? pageSize, CancellationToken ct) {
             var uri = new UriBuilder($"{_serviceUri}/v2/groups");

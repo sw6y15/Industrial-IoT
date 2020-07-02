@@ -41,9 +41,16 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Models {
         public NetworkMessageType? MessageType { get; set; }
 
         /// <summary>
+        /// Return groups only in the specified state
+        /// </summary>
+        [DataMember(Name = "state", Order = 4,
+            EmitDefaultValue = false)]
+        public WriterGroupState? State { get; set; }
+
+        /// <summary>
         /// Return groups with this priority
         /// </summary>
-        [DataMember(Name = "priority", Order = 4,
+        [DataMember(Name = "priority", Order = 5,
             EmitDefaultValue = false)]
         public byte? Priority { get; set; }
     }

@@ -21,6 +21,15 @@ namespace Microsoft.Azure.IIoT.Hub.Models {
         }
 
         /// <summary>
+        /// Check whether device is connected
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        public static bool? IsDisabled(this DeviceModel model) {
+            return model.Status?.EqualsIgnoreCase("disabled");
+        }
+
+        /// <summary>
         /// Clone twin
         /// </summary>
         /// <param name="model"></param>
@@ -32,6 +41,7 @@ namespace Microsoft.Azure.IIoT.Hub.Models {
             return new DeviceModel {
                 Etag = model.Etag,
                 Id = model.Id,
+                Status = model.Status?.ToLowerInvariant(),
                 ModuleId = model.ModuleId,
                 ConnectionState = model.ConnectionState,
                 Authentication = model.Authentication.Clone()

@@ -13,6 +13,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Testing.Tests {
     using Xunit;
     using System;
     using System.Collections.Generic;
+    using System.Linq;
 
     public class BrowseServicesTests<T> {
 
@@ -1276,6 +1277,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Testing.Tests {
             Assert.Equal("Array", results.Node.DisplayName);
             Assert.Equal(NodeClass.Object, results.Node.NodeClass);
             Assert.True(results.Node.Children);
+            Assert.True(30 == results.References.Count,
+                _serializer.SerializeArrayPretty(
+                    results.References.Select(r => r.Target.DisplayName)));
             Assert.Collection(results.References,
                 reference => {
                     Assert.Equal(NodeClass.Variable, reference.Target.NodeClass);
@@ -1763,7 +1767,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Testing.Tests {
             Assert.Equal(NodeClass.Object, results.Node.NodeClass);
             Assert.True(results.Node.Children);
             Assert.True(30 == results.References.Count,
-                _serializer.SerializeArrayPretty(results.References));
+                _serializer.SerializeArrayPretty(
+                    results.References.Select(r => r.Target.DisplayName)));
             Assert.Collection(results.References,
                 reference => {
                     Assert.Equal(NodeClass.Variable, reference.Target.NodeClass);

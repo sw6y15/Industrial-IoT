@@ -207,6 +207,25 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Publisher {
             string writerGroupId, CancellationToken ct = default);
 
         /// <summary>
+        /// Activate writer group for publishing
+        /// </summary>
+        /// <param name="writerGroupId">The writerGroupId</param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        Task ActivateWriterGroupAsync(string writerGroupId,
+            CancellationToken ct = default);
+
+        /// <summary>
+        /// Deactivate publishing of network message by writer
+        /// group.
+        /// </summary>
+        /// <param name="writerGroupId">The writerGroupId</param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        Task DeactivateWriterGroupAsync(string writerGroupId,
+            CancellationToken ct = default);
+
+        /// <summary>
         /// Update an existing application, e.g. server
         /// certificate, or additional capabilities.
         /// </summary>

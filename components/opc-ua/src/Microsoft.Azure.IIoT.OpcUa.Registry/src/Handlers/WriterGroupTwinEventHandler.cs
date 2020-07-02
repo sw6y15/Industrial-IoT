@@ -50,14 +50,16 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Handlers {
             if (IdentityType.WriterGroup.EqualsIgnoreCase(type)) {
                 switch (ev.Event) {
                     case DeviceTwinEventType.Update:
+                        // Toggle connection state
                         var state = ev.Twin.IsConnected() ?? false ?
                                 WriterGroupState.Pending : WriterGroupState.Publishing;
                         await _registry.UpdateWriterGroupStateAsync(writerGroupId,
                             state, context);
                         break;
                     case DeviceTwinEventType.Delete:
+                        // Writer group identity deleted - disable group state
                         await _registry.UpdateWriterGroupStateAsync(writerGroupId,
-                            null, context);
+                            WriterGroupState.Disabled, context);
                         break;
                 }
                 ev.Handled = true;

@@ -14,11 +14,11 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
         /// <summary>
         /// State indicator
         /// </summary>
-        public WriterGroupState? State { get; set; }
+        public WriterGroupState State { get; set; }
 
         /// <summary>
         /// Last state change
         /// </summary>
-        public DateTime? LastStateChange { get; set; }
+        public DateTime LastStateChange { get; set; }
     }
 }

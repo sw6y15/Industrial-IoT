@@ -31,7 +31,12 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
         public NetworkMessageType? MessageType { get; set; }
 
         /// <summary>
-        /// Return groups with this priority
+        /// Return groups in the specified state
+        /// </summary>
+        public WriterGroupState? State { get; set; }
+
+        /// <summary>
+        /// Return groups only in the specified state
         /// </summary>
         public byte? Priority { get; set; }
     }

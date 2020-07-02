@@ -3,7 +3,7 @@
 //  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace Microsoft.Azure.IIoT.OpcUa.Publisher {
+namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
 
     /// <summary>
     /// Writer group state
@@ -11,7 +11,12 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher {
     public enum WriterGroupState {
 
         /// <summary>
-        /// Publishing is suspended or pending
+        /// Publishing is disabled
+        /// </summary>
+        Disabled,
+
+        /// <summary>
+        /// Publishing is pending
         /// </summary>
         Pending,
 

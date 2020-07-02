@@ -44,8 +44,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
                 UpdatedAuditId = model.Updated?.AuthorityId,
                 Created = model.Created?.Time ?? DateTime.UtcNow,
                 CreatedAuditId = model.Created?.AuthorityId,
-                LastState = model.State?.State,
-                LastStateChange = model.State?.LastStateChange,
+                LastState = model.State?.State ?? WriterGroupState.Disabled,
+                LastStateChange = model.State?.LastStateChange ?? DateTime.UtcNow,
                 ClassType = WriterGroupDocument.ClassTypeName
             };
         }
@@ -79,7 +79,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
                     PublishingOffset = document.PublishingOffset,
                     SamplingOffset = document.SamplingOffset
                 },
-                State = document.LastState == null ? null : new WriterGroupStateModel {
+                State = new WriterGroupStateModel {
                     State = document.LastState,
                     LastStateChange = document.LastStateChange
                 },
