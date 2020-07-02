@@ -25,7 +25,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
         /// <param name="config"></param>
         public DataSetWriterDatabase(IDatabaseServer databaseServer, IItemContainerConfig config) {
             var dbs = databaseServer.OpenAsync(config.DatabaseName).Result;
-            var cont = dbs.OpenContainerAsync(config.ContainerName).Result;
+            var cont = dbs.OpenContainerAsync(config.ContainerName ?? "publisher").Result;
             _documents = cont.AsDocuments();
         }
 
@@ -149,7 +149,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
                 client.Query<DataSetWriterDocument>(CreateQuery(query, out var queryParameters),
                     queryParameters, maxResults);
             if (!results.HasMore()) {
-                return new DataSetWriterInfoListModel();
+                return new DataSetWriterInfoListModel {
+                    DataSetWriters = new List<DataSetWriterInfoModel>()
+                };
             }
             var documents = await results.ReadAsync(ct);
             return new DataSetWriterInfoListModel {

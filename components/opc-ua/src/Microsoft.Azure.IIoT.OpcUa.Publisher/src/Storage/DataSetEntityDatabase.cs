@@ -25,7 +25,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
         /// <param name="config"></param>
         public DataSetEntityDatabase(IDatabaseServer databaseServer, IItemContainerConfig config) {
             var dbs = databaseServer.OpenAsync(config.DatabaseName).Result;
-            var cont = dbs.OpenContainerAsync(config.ContainerName).Result;
+            var cont = dbs.OpenContainerAsync(config.ContainerName ?? "publisher").Result;
             _documents = cont.AsDocuments();
         }
 
@@ -376,7 +376,9 @@ $"r.{nameof(DataSetEntityDocument.ClassType)} = '{DataSetEntityDocument.ClassTyp
                 client.Query<DataSetEntityDocument>(CreateQuery(dataSetWriterId,
                     query, out var queryParameters), queryParameters, maxResults);
             if (!results.HasMore()) {
-                return new PublishedDataSetVariableListModel();
+                return new PublishedDataSetVariableListModel {
+                    Variables = new List<PublishedDataSetVariableModel>()
+                };
             }
             var documents = await results.ReadAsync(ct);
             return new PublishedDataSetVariableListModel {

@@ -532,7 +532,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Twin.Services {
                 builder.RegisterType<MockConfig>().As<IItemContainerConfig>();
                 var registry = new Mock<IEndpointRegistry>();
                 registry
-                    .Setup(e => e.GetEndpointAsync(It.IsAny<string>(), false, It.IsAny<CancellationToken>()))
+                    .Setup(e => e.GetEndpointAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
                     .Returns(Task.FromResult(new EndpointInfoModel {
                         Registration = new EndpointRegistrationModel {
                             EndpointUrl = "fakeurl",

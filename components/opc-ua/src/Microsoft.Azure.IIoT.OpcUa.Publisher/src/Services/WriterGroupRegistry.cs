@@ -878,6 +878,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                 await Try.Async(() => _dataSets.DeleteDataSetAsync(dataSetWriterId));
                 return true;
             }, ct);
+            if (writer == null) {
+                throw new ResourceNotFoundException("Dataset writer not found");
+            }
             await _writerEvents.NotifyAllAsync(
                 l => l.OnDataSetWriterRemovedAsync(context, writer));
         }
@@ -911,7 +914,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
         private async Task<DataSetWriterModel> GetDataSetWriterAsync(
             DataSetWriterInfoModel writerInfo, CancellationToken ct) {
             var endpoint = string.IsNullOrEmpty(writerInfo.DataSet.EndpointId) ? null :
-                await _endpoints.GetEndpointAsync(writerInfo.DataSet.EndpointId, false, ct);
+                await _endpoints.GetEndpointAsync(writerInfo.DataSet.EndpointId, true, ct);
             var connection = endpoint.Registration?.Endpoint == null ? null :
                 new ConnectionModel {
                     Endpoint = endpoint.Registration.Endpoint.Clone(),

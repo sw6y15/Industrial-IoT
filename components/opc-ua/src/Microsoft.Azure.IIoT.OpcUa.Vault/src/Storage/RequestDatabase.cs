@@ -139,7 +139,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Vault.Storage {
                     CreateQuery(query, out var queryParameters),
                     queryParameters, maxResults);
             if (!results.HasMore()) {
-                return new CertificateRequestListModel();
+                return new CertificateRequestListModel {
+                    Requests = new List<CertificateRequestModel>()
+                };
             }
             var documents = await results.ReadAsync(ct);
             return new CertificateRequestListModel {

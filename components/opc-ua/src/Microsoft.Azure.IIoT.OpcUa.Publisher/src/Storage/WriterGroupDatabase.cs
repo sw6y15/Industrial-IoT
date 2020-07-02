@@ -25,7 +25,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
         /// <param name="config"></param>
         public WriterGroupDatabase(IDatabaseServer databaseServer, IItemContainerConfig config) {
             var dbs = databaseServer.OpenAsync(config.DatabaseName).Result;
-            var cont = dbs.OpenContainerAsync(config.ContainerName).Result;
+            var cont = dbs.OpenContainerAsync(config.ContainerName ?? "publisher").Result;
             _documents = cont.AsDocuments();
         }
 
@@ -151,7 +151,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
                 client.Query<WriterGroupDocument>(CreateQuery(query, out var queryParameters),
                     queryParameters, maxResults);
             if (!results.HasMore()) {
-                return new WriterGroupInfoListModel();
+                return new WriterGroupInfoListModel {
+                    WriterGroups = new List<WriterGroupInfoModel>()
+                };
             }
             var documents = await results.ReadAsync(ct);
             return new WriterGroupInfoListModel {

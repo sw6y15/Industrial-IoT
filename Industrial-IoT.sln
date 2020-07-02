@@ -232,6 +232,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Azure.IIoT.OpcUa.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Tests", "modules\src\Microsoft.Azure.IIoT.Modules.OpcUa.Publisher\tests\Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Tests.csproj", "{6EA8119D-2ACB-4CCF-A8B6-D95A02525E45}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Azure.IIoT.OpcUa.Publisher.Tests", "components\opc-ua\src\Microsoft.Azure.IIoT.OpcUa.Publisher\tests\Microsoft.Azure.IIoT.OpcUa.Publisher.Tests.csproj", "{262ECCD0-BFD0-4425-BC54-00D5E0673C35}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -952,6 +954,14 @@ Global
 		{6EA8119D-2ACB-4CCF-A8B6-D95A02525E45}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6EA8119D-2ACB-4CCF-A8B6-D95A02525E45}.Release|x64.ActiveCfg = Release|Any CPU
 		{6EA8119D-2ACB-4CCF-A8B6-D95A02525E45}.Release|x64.Build.0 = Release|Any CPU
+		{262ECCD0-BFD0-4425-BC54-00D5E0673C35}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{262ECCD0-BFD0-4425-BC54-00D5E0673C35}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{262ECCD0-BFD0-4425-BC54-00D5E0673C35}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{262ECCD0-BFD0-4425-BC54-00D5E0673C35}.Debug|x64.Build.0 = Debug|Any CPU
+		{262ECCD0-BFD0-4425-BC54-00D5E0673C35}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{262ECCD0-BFD0-4425-BC54-00D5E0673C35}.Release|Any CPU.Build.0 = Release|Any CPU
+		{262ECCD0-BFD0-4425-BC54-00D5E0673C35}.Release|x64.ActiveCfg = Release|Any CPU
+		{262ECCD0-BFD0-4425-BC54-00D5E0673C35}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1064,6 +1074,7 @@ Global
 		{2A2BA11F-649F-4ED3-88D8-1BE679E049BA} = {1266F300-8BD2-4F1E-BA88-911F5F3AC36C}
 		{282789C2-9723-45FB-B3F4-BD57B0B890AB} = {A6028EDB-3331-48D2-8C7D-8D681172A61A}
 		{6EA8119D-2ACB-4CCF-A8B6-D95A02525E45} = {43E69B85-2743-48EE-8FAE-A59F070E21D2}
+		{262ECCD0-BFD0-4425-BC54-00D5E0673C35} = {1266F300-8BD2-4F1E-BA88-911F5F3AC36C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F09EFCEA-59F6-4A16-9CB6-7E865A3F62D8}
