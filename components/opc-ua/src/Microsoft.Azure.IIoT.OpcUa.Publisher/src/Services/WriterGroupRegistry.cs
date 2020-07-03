@@ -502,12 +502,17 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                         null : request.DeadbandType;
                     updated = true;
                 }
+                if (request.DeadbandValue != null) {
+                    existing.DeadbandValue = request.DeadbandValue == 0.0 ?
+                        null : request.DeadbandValue;
+                    updated = true;
+                }
                 if (request.DataChangeFilter != null) {
                     existing.DataChangeFilter = request.DataChangeFilter == 0 ?
                         null : request.DataChangeFilter;
                     updated = true;
                 }
-                if (request.SubstituteValue != null) {
+                if (!(request.SubstituteValue is null)) {
                     existing.SubstituteValue = request.SubstituteValue.IsNull() ?
                         null : request.SubstituteValue;
                     updated = true;

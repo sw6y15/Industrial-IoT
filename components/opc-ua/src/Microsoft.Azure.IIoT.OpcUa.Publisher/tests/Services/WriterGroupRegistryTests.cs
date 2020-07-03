@@ -629,10 +629,41 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                 // Assert
                 Assert.Equal(3, found.Count);
                 Assert.All(found, v => {
-                    Assert.Null(v.PublishedVariableDisplayName);
                     Assert.Equal(TimeSpan.FromDays(1), v.HeartbeatInterval);
                     Assert.Contains(result.Results, f => f.Id == v.Id);
+                    Assert.Null(v.DeadbandValue);
+                    Assert.Null(v.MonitoringMode);
+                    Assert.Null(v.DeadbandType);
+                    Assert.Null(v.DataChangeFilter);
+                    Assert.Null(v.DiscardNew);
+                    Assert.Null(v.QueueSize);
+                    Assert.Null(v.PublishedVariableDisplayName);
+                    Assert.Null(v.SubstituteValue);
+                    Assert.Null(v.SamplingInterval);
+                    Assert.Null(v.TriggerId);
                 });
+
+                await Assert.ThrowsAsync<ResourceOutOfDateException>(() =>
+                    service.UpdateDataSetVariableAsync(writer.DataSetWriterId, found.Last().Id,
+                    new DataSetUpdateVariableRequestModel {
+                        GenerationId = "badgenerationid",
+                        MonitoringMode = Models.MonitoringMode.Reporting
+                    }));
+                await service.UpdateDataSetVariableAsync(writer.DataSetWriterId, found.Last().Id,
+                    new DataSetUpdateVariableRequestModel {
+                        GenerationId = found.Last().GenerationId,
+                        MonitoringMode = Models.MonitoringMode.Reporting,
+                        DeadbandType = Models.DeadbandType.Percent,
+                        DeadbandValue = 0.5,
+                        DataChangeFilter = DataChangeTriggerType.StatusValue,
+                        DiscardNew = true,
+                        HeartbeatInterval = TimeSpan.FromSeconds(2),
+                        QueueSize = 44u,
+                        PublishedVariableDisplayName = "Test",
+                        SamplingInterval = TimeSpan.FromSeconds(4),
+                        SubstituteValue = "string",
+                        TriggerId = "555"
+                    });
 
                 var remove = batch.RemoveVariablesFromDataSetWriterAsync(writer.DataSetWriterId,
                     new DataSetRemoveVariableBatchRequestModel {
@@ -650,6 +681,337 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                 found = await service.ListAllDataSetVariablesAsync(writer.DataSetWriterId);
                 Assert.NotNull(found);
                 Assert.Single(found);
+                Assert.Equal(0.5, found.Single().DeadbandValue);
+                Assert.Equal(Models.MonitoringMode.Reporting, found.Single().MonitoringMode);
+                Assert.Equal(Models.DeadbandType.Percent, found.Single().DeadbandType);
+                Assert.Equal(DataChangeTriggerType.StatusValue, found.Single().DataChangeFilter);
+                Assert.Equal(true, found.Single().DiscardNew);
+                Assert.Equal(TimeSpan.FromSeconds(2), found.Single().HeartbeatInterval);
+                Assert.Equal(44u, found.Single().QueueSize);
+                Assert.Equal("Test", found.Single().PublishedVariableDisplayName);
+                Assert.Equal(TimeSpan.FromSeconds(4), found.Single().SamplingInterval);
+                Assert.Equal("string", found.Single().SubstituteValue);
+                Assert.Equal("555", found.Single().TriggerId);
+
+                await service.UpdateDataSetVariableAsync(writer.DataSetWriterId, found.Last().Id,
+                    new DataSetUpdateVariableRequestModel {
+                        GenerationId = found.Last().GenerationId,
+                        MonitoringMode = Models.MonitoringMode.Disabled,
+                        DeadbandType = Models.DeadbandType.Absolute,
+                        DeadbandValue = 0.0,
+                        DataChangeFilter = DataChangeTriggerType.Status,
+                        DiscardNew = false,
+                        HeartbeatInterval = TimeSpan.FromSeconds(0),
+                        QueueSize = 0u,
+                        PublishedVariableDisplayName = "",
+                        SamplingInterval = TimeSpan.FromSeconds(0),
+                        SubstituteValue = VariantValue.Null,
+                        TriggerId = ""
+                    });
+
+                // Assert
+                found = await service.ListAllDataSetVariablesAsync(writer.DataSetWriterId);
+                Assert.NotNull(found);
+                Assert.Single(found);
+                var v = found.Single();
+                Assert.Null(v.DeadbandValue);
+                Assert.Null(v.MonitoringMode);
+                Assert.Null(v.DeadbandType);
+                Assert.Null(v.DataChangeFilter);
+                Assert.Null(v.DiscardNew);
+                Assert.Null(v.HeartbeatInterval);
+                Assert.Null(v.QueueSize);
+                Assert.Null(v.PublishedVariableDisplayName);
+                Assert.Null(v.SubstituteValue);
+                Assert.Null(v.SamplingInterval);
+                Assert.Null(v.TriggerId);
+            }
+        }
+
+        [Fact]
+        public async Task UpdateWriterAndGroupTestAsync() {
+
+            using (var mock = Setup((v, q) => {
+                var id = q
+                    .Replace("SELECT * FROM r WHERE r.DataSetWriterId = '", "")
+                    .Replace("' AND r.ClassType = 'DataSetEntity' AND r.Type = 'Variable'", "");
+                if (Guid.TryParse(id, out var dataSetWriterid)) {
+                    // Get variables
+                    return v
+                        .Where(o => o.Value["DataSetWriterId"] == dataSetWriterid.ToString())
+                        .Where(o => o.Value["ClassType"] == "DataSetEntity")
+                        .Where(o => o.Value["Type"] == "Variable");
+                }
+
+                id = q
+                    .Replace("SELECT * FROM r WHERE r.WriterGroupId = '", "")
+                    .Replace("' AND r.IsDisabled = false AND r.ClassType = 'DataSetWriter'", "");
+                if (Guid.TryParse(id, out var writerGroupId)) {
+                    // Get writers
+                    return v
+                        .Where(o => o.Value["WriterGroupId"] == writerGroupId.ToString())
+                        .Where(o => o.Value["ClassType"] == "DataSetWriter")
+                        .Where(o => o.Value["IsDisabled"] == false);
+                }
+
+                id = q
+                    .Replace("SELECT * FROM r WHERE r.WriterGroupId = '", "")
+                    .Replace("' AND r.ClassType = 'DataSetWriter'", "");
+                if (Guid.TryParse(id, out writerGroupId)) {
+                    // Get writers not disabled
+                    return v
+                        .Where(o => o.Value["WriterGroupId"] == writerGroupId.ToString())
+                        .Where(o => o.Value["ClassType"] == "DataSetWriter");
+                }
+
+                id = q
+                    .Replace("SELECT * FROM r WHERE r.DataSetWriterId = '", "")
+                    .Replace("' AND r.ClassType = 'DataSetEntity'", "");
+                if (Guid.TryParse(id, out dataSetWriterid)) {
+                    // Get variables and entities
+                    return v
+                        .Where(o => o.Value["DataSetWriterId"] == dataSetWriterid.ToString())
+                        .Where(o => o.Value["ClassType"] == "DataSetEntity");
+                }
+
+                var expected = "SELECT * FROM r WHERE r.ClassType = 'DataSetWriter'";
+                if (q == expected) {
+                    // Get variables and entities
+                    return v
+                        .Where(o => o.Value["ClassType"] == "DataSetWriter");
+                }
+
+                expected = "SELECT * FROM r WHERE r.ClassType = 'WriterGroup'";
+                if (q == expected) {
+                    // Get variables and entities
+                    return v
+                        .Where(o => o.Value["ClassType"] == "WriterGroup");
+                }
+
+                throw new AssertActualExpectedException(null, q, "Query");
+            })) {
+
+                IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
+                IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
+                IWriterGroupRepository store = mock.Create<WriterGroupDatabase>();
+
+                // Act
+                var result1 = await groups.AddWriterGroupAsync(new WriterGroupAddRequestModel {
+                    Name = "Test",
+                    SiteId = "fakesite" // See below
+                });
+
+                await Assert.ThrowsAsync<ResourceOutOfDateException>(() =>
+                    groups.UpdateWriterGroupAsync(result1.WriterGroupId,
+                    new WriterGroupUpdateRequestModel {
+                        GenerationId = "badgenerationid",
+                        BatchSize = 5
+                    }));
+                await groups.UpdateWriterGroupAsync(result1.WriterGroupId,
+                    new WriterGroupUpdateRequestModel {
+                        GenerationId = result1.GenerationId,
+                        BatchSize = 44,
+                        HeaderLayoutUri = "HeaderLayoutUri",
+                        KeepAliveTime = TimeSpan.FromSeconds(56),
+                        LocaleIds = new List<string> {
+                            "a", "a", "a"
+                        },
+                        MessageSettings = new WriterGroupMessageSettingsModel {
+                            DataSetOrdering = Models.DataSetOrderingType.AscendingWriterIdSingle,
+                            GroupVersion = 34,
+                            NetworkMessageContentMask =
+                                NetworkMessageContentMask.NetworkMessageHeader |
+                                NetworkMessageContentMask.DataSetClassId,
+                            PublishingOffset = new List<double> {
+                                0.5, 0.5
+                            },
+                            SamplingOffset = 0.5
+                        },
+                        MessageType = NetworkMessageType.Uadp,
+                        Name = "New name",
+                        Priority = 66,
+                        PublishingInterval = TimeSpan.FromMilliseconds(566)
+                    });
+
+                var group = await groups.GetWriterGroupAsync(result1.WriterGroupId);
+                Assert.Equal(44, group.BatchSize);
+                Assert.Equal("HeaderLayoutUri", group.HeaderLayoutUri);
+                Assert.Equal(TimeSpan.FromSeconds(56), group.KeepAliveTime);
+                Assert.All(group.LocaleIds, b => Assert.Equal("a", b));
+                Assert.NotNull(group.MessageSettings);
+                Assert.Equal(Models.DataSetOrderingType.AscendingWriterIdSingle, group.MessageSettings.DataSetOrdering);
+                Assert.Equal(34u, group.MessageSettings.GroupVersion);
+                Assert.Equal(NetworkMessageContentMask.NetworkMessageHeader | NetworkMessageContentMask.DataSetClassId,
+                    group.MessageSettings.NetworkMessageContentMask);
+                Assert.All(group.MessageSettings.PublishingOffset, b=> Assert.Equal(0.5, b));
+                Assert.Equal(0.5, group.MessageSettings.SamplingOffset);
+                Assert.Equal(NetworkMessageType.Uadp, group.MessageType);
+                Assert.Equal("New name", group.Name);
+                Assert.Equal((byte)66, group.Priority);
+                Assert.Equal(TimeSpan.FromMilliseconds(566), group.PublishingInterval);
+
+                var result2 = await service.AddDataSetWriterAsync(new DataSetWriterAddRequestModel {
+                    EndpointId = "endpoint1",
+                    DataSetName = "Test",
+                    KeyFrameInterval = TimeSpan.FromSeconds(1),
+                    SubscriptionSettings = new PublishedDataSetSourceSettingsModel {
+                        Priority = 1
+                    },
+                    WriterGroupId = result1.WriterGroupId
+                });
+
+                await Assert.ThrowsAsync<ResourceOutOfDateException>(() =>
+                    service.UpdateDataSetWriterAsync(result2.DataSetWriterId,
+                    new DataSetWriterUpdateRequestModel {
+                        GenerationId = "badgenerationid",
+                        KeyFrameInterval = TimeSpan.FromSeconds(5)
+                    }));
+                await service.UpdateDataSetWriterAsync(result2.DataSetWriterId,
+                    new DataSetWriterUpdateRequestModel {
+                        GenerationId = result2.GenerationId,
+                        KeyFrameInterval = TimeSpan.FromSeconds(5),
+                        WriterGroupId = "noid",
+                        DataSetFieldContentMask =
+                            Models.DataSetFieldContentMask.ApplicationUri |
+                            Models.DataSetFieldContentMask.DisplayName,
+                        DataSetName = "supername",
+                        ExtensionFields = new Dictionary<string, string> {
+                            ["test"] = "total"
+                        },
+                        KeyFrameCount = 566,
+                        MessageSettings = new DataSetWriterMessageSettingsModel {
+                            ConfiguredSize = 5,
+                            DataSetMessageContentMask =
+                                DataSetContentMask.DataSetWriterId |
+                                DataSetContentMask.MajorVersion,
+                            DataSetOffset = 5,
+                            NetworkMessageNumber = 66
+                        },
+                        SubscriptionSettings = new PublishedDataSetSourceSettingsModel {
+                            LifeTimeCount = 55,
+                            MaxKeepAliveCount = 6,
+                            MaxNotificationsPerPublish = 5,
+                            Priority = 6,
+                            PublishingInterval = TimeSpan.FromMinutes(6),
+                            ResolveDisplayName = true
+                        },
+                        User = new CredentialModel {
+                            Type = CredentialType.UserName,
+                            Value = "test"
+                        }
+                    });
+
+                var writer = await service.GetDataSetWriterAsync(result2.DataSetWriterId);
+                Assert.Equal(TimeSpan.FromSeconds(5), writer.KeyFrameInterval);
+                Assert.Equal(Models.DataSetFieldContentMask.ApplicationUri |
+                    Models.DataSetFieldContentMask.DisplayName, writer.DataSetFieldContentMask);
+                Assert.Equal(566u, writer.KeyFrameCount);
+                Assert.NotNull(writer.DataSet);
+                Assert.Equal("supername", writer.DataSet.Name);
+                Assert.Equal("total", writer.DataSet.ExtensionFields["test"]);
+                Assert.NotNull(writer.DataSet.DataSetSource);
+                Assert.NotNull(writer.DataSet.DataSetSource.SubscriptionSettings);
+                Assert.Equal(true, writer.DataSet.DataSetSource.SubscriptionSettings.ResolveDisplayName);
+                Assert.Equal(TimeSpan.FromMinutes(6), writer.DataSet.DataSetSource.SubscriptionSettings.PublishingInterval);
+                Assert.Equal((byte)6, writer.DataSet.DataSetSource.SubscriptionSettings.Priority);
+                Assert.Equal(5u, writer.DataSet.DataSetSource.SubscriptionSettings.MaxNotificationsPerPublish);
+                Assert.Equal(6u, writer.DataSet.DataSetSource.SubscriptionSettings.MaxKeepAliveCount);
+                Assert.Equal(55u, writer.DataSet.DataSetSource.SubscriptionSettings.LifeTimeCount);
+                Assert.NotNull(writer.DataSet.DataSetSource.Connection);
+                Assert.NotNull(writer.DataSet.DataSetSource.Connection.User);
+                Assert.Equal(CredentialType.UserName, writer.DataSet.DataSetSource.Connection.User.Type);
+                Assert.Equal("test", writer.DataSet.DataSetSource.Connection.User.Value);
+                Assert.NotNull(writer.MessageSettings);
+                Assert.Equal(DataSetContentMask.DataSetWriterId | DataSetContentMask.MajorVersion,
+                    writer.MessageSettings.DataSetMessageContentMask);
+                Assert.Equal((ushort)66, writer.MessageSettings.NetworkMessageNumber);
+                Assert.Equal((ushort)5, writer.MessageSettings.ConfiguredSize);
+                Assert.Equal((ushort)5, writer.MessageSettings.DataSetOffset);
+
+                await service.UpdateDataSetWriterAsync(result2.DataSetWriterId,
+                    new DataSetWriterUpdateRequestModel {
+                        GenerationId = writer.GenerationId,
+                        KeyFrameInterval = TimeSpan.FromSeconds(0),
+                        WriterGroupId = "",
+                        DataSetFieldContentMask = 0,
+                        DataSetName = "",
+                        ExtensionFields = new Dictionary<string, string>(),
+                        KeyFrameCount = 0,
+                        MessageSettings = new DataSetWriterMessageSettingsModel {
+                            ConfiguredSize = 0,
+                            DataSetMessageContentMask =0,
+                            DataSetOffset = 0,
+                            NetworkMessageNumber = 0
+                        },
+                        SubscriptionSettings = new PublishedDataSetSourceSettingsModel {
+                            LifeTimeCount = 0,
+                            MaxKeepAliveCount = 0,
+                            MaxNotificationsPerPublish = 0,
+                            Priority = 0,
+                            PublishingInterval = TimeSpan.FromMinutes(0),
+                            ResolveDisplayName = false
+                        },
+                        User = new CredentialModel {}
+                    });
+
+                writer = await service.GetDataSetWriterAsync(result2.DataSetWriterId);
+                Assert.Null(writer.KeyFrameInterval);
+                Assert.Null(writer.DataSetFieldContentMask);
+                Assert.Null(writer.KeyFrameCount);
+                Assert.NotNull(writer.DataSet);
+                Assert.Null(writer.DataSet.Name);
+                Assert.Null(writer.DataSet.ExtensionFields);
+                Assert.NotNull(writer.DataSet.DataSetSource);
+                Assert.NotNull(writer.DataSet.DataSetSource.SubscriptionSettings);
+                Assert.Null(writer.DataSet.DataSetSource.SubscriptionSettings.ResolveDisplayName);
+                Assert.Null(writer.DataSet.DataSetSource.SubscriptionSettings.PublishingInterval);
+                Assert.Null(writer.DataSet.DataSetSource.SubscriptionSettings.Priority);
+                Assert.Null(writer.DataSet.DataSetSource.SubscriptionSettings.MaxNotificationsPerPublish);
+                Assert.Null(writer.DataSet.DataSetSource.SubscriptionSettings.MaxKeepAliveCount);
+                Assert.Null(writer.DataSet.DataSetSource.SubscriptionSettings.LifeTimeCount);
+                Assert.NotNull(writer.DataSet.DataSetSource.Connection);
+                Assert.Null(writer.DataSet.DataSetSource.Connection.User);
+                Assert.NotNull(writer.MessageSettings);
+                Assert.Null(writer.MessageSettings.DataSetMessageContentMask);
+                Assert.Null(writer.MessageSettings.NetworkMessageNumber);
+                Assert.Null(writer.MessageSettings.ConfiguredSize);
+                Assert.Null(writer.MessageSettings.DataSetOffset);
+
+                await groups.UpdateWriterGroupAsync(group.WriterGroupId,
+                    new WriterGroupUpdateRequestModel {
+                        GenerationId = group.GenerationId,
+                        BatchSize = 0,
+                        HeaderLayoutUri = "",
+                        KeepAliveTime = TimeSpan.FromSeconds(0),
+                        LocaleIds = new List<string>(),
+                        MessageSettings = new WriterGroupMessageSettingsModel {
+                            DataSetOrdering = 0,
+                            GroupVersion = 0u,
+                            NetworkMessageContentMask = 0,
+                            PublishingOffset = new List<double>(),
+                            SamplingOffset = 0.0
+                        },
+                        MessageType = NetworkMessageType.Json,
+                        Name = "",
+                        Priority = 0,
+                        PublishingInterval = TimeSpan.FromMilliseconds(0)
+                    });
+
+                group = await groups.GetWriterGroupAsync(result1.WriterGroupId);
+                Assert.Null(group.BatchSize);
+                Assert.Null(group.HeaderLayoutUri);
+                Assert.Null(group.KeepAliveTime);
+                Assert.Null(group.LocaleIds);
+                Assert.NotNull(group.MessageSettings);
+                Assert.Null(group.MessageSettings.DataSetOrdering);
+                Assert.Null(group.MessageSettings.GroupVersion);
+                Assert.Null(group.MessageSettings.NetworkMessageContentMask);
+                Assert.Null(group.MessageSettings.PublishingOffset);
+                Assert.Null(group.MessageSettings.SamplingOffset);
+                Assert.Null(group.MessageType);
+                Assert.Null(group.Name);
+                Assert.Null(group.Priority);
+                Assert.Null(group.PublishingInterval);
             }
         }
 

@@ -114,8 +114,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
         public TimeSpan? KeepAliveTime { get; set; }
 
         /// <summary>
-        /// Network message types to generate (publisher extension)
+        /// Network message types to generate
         /// </summary>
+        [DataMember]
         public NetworkMessageType? MessageType { get; set; }
 
         /// <summary>
