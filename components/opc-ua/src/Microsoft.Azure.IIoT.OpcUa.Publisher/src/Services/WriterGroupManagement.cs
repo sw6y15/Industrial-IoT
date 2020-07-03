@@ -256,7 +256,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
         /// <inheritdoc/>
         public Task OnEndpointDeletedAsync(RegistryOperationContextModel context,
             string endpointId, EndpointInfoModel endpoint) {
-            return EnableWritersWithEndpointAsync(endpoint.Registration.Id, false,
+            return EnableWritersWithEndpointAsync(endpointId, false,
                 context == null ? null : new PublisherOperationContextModel {
                     AuthorityId = context.AuthorityId,
                     Time = context.Time

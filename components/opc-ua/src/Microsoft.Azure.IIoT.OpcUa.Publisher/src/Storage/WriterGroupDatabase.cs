@@ -230,6 +230,11 @@ $"r.{nameof(WriterGroupDocument.Priority)} = @priority AND ";
 $"r.{nameof(WriterGroupDocument.SiteId)} = @siteId AND ";
                 queryParameters.Add("@siteId", query.SiteId);
             }
+            if (query?.State != null) {
+                queryString +=
+$"r.{nameof(WriterGroupDocument.LastState)} = @state AND ";
+                queryParameters.Add("@state", query.State.Value);
+            }
             if (query?.Name != null) {
                 queryString +=
 $"r.{nameof(WriterGroupDocument.Name)} = @name AND ";

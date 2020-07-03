@@ -20,15 +20,14 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
+    using System.Threading;
     using Xunit;
     using Xunit.Sdk;
     using Autofac;
     using Moq;
-    using System.Threading;
-    using Opc.Ua;
 
     /// <summary>
-    /// Certificate Issuer tests
+    /// Writer group registry tests
     /// </summary>
     public class WriterGroupRegistryTests {
 
@@ -40,7 +39,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
             })) {
 
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
-                IWriterGroupRepository store = mock.Create<WriterGroupDatabase>();
 
                 await Assert.ThrowsAsync<ArgumentNullException>(async () => {
                     await service.AddDataSetWriterAsync(new DataSetWriterAddRequestModel {
@@ -70,7 +68,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
 
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
                 IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
-                IWriterGroupRepository store = mock.Create<WriterGroupDatabase>();
 
                 // Act
                 var result = await groups.AddWriterGroupAsync(new WriterGroupAddRequestModel {
@@ -107,7 +104,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
 
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
                 IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
-                IWriterGroupRepository store = mock.Create<WriterGroupDatabase>();
 
                 // Assert
                 var id = Guid.NewGuid().ToString();
@@ -186,7 +182,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
 
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
                 IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
-                IWriterGroupRepository store = mock.Create<WriterGroupDatabase>();
 
                 // Act
                 var result1 = await groups.AddWriterGroupAsync(new WriterGroupAddRequestModel {
@@ -314,7 +309,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
 
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
                 IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
-                IWriterGroupRepository store = mock.Create<WriterGroupDatabase>();
 
                 // Act
                 var result2 = await service.AddDataSetWriterAsync(new DataSetWriterAddRequestModel {
@@ -394,7 +388,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
 
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
                 IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
-                IWriterGroupRepository store = mock.Create<WriterGroupDatabase>();
 
                 // Act
                 var group = await groups.AddWriterGroupAsync(new WriterGroupAddRequestModel {
@@ -493,7 +486,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
 
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
                 IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
-                IWriterGroupRepository store = mock.Create<WriterGroupDatabase>();
 
                 // Act
                 var group = await groups.AddWriterGroupAsync(new WriterGroupAddRequestModel {
@@ -562,32 +554,12 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                         .Where(o => o.Value["ClassType"] == "DataSetEntity")
                         .Where(o => o.Value["Type"] == "Variable");
                 }
-                id = q
-                    .Replace("SELECT * FROM r WHERE r.DataSetWriterId = '", "")
-                    .Replace("' AND r.ClassType = 'DataSetEntity'", "");
-                if (Guid.TryParse(id, out dataSetWriterid)) {
-                    // Get variables and entities
-                    return v
-                        .Where(o => o.Value["DataSetWriterId"] == dataSetWriterid.ToString())
-                        .Where(o => o.Value["ClassType"] == "DataSetEntity");
-                }
-
-                id = q
-                    .Replace("SELECT * FROM r WHERE r.WriterGroupId = '", "")
-                    .Replace("' AND r.ClassType = 'DataSetWriter'", "");
-                if (Guid.TryParse(id, out var writerGroupId)) {
-                    // Get writers not disabled
-                    return v
-                        .Where(o => o.Value["WriterGroupId"] == writerGroupId.ToString())
-                        .Where(o => o.Value["ClassType"] == "DataSetWriter");
-                }
                 throw new AssertActualExpectedException(null, q, "Query");
             })) {
 
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
                 IDataSetBatchOperations batch = mock.Create<WriterGroupRegistry>();
                 IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
-                IWriterGroupRepository store = mock.Create<WriterGroupDatabase>();
 
                 // Act
                 var group = await groups.AddWriterGroupAsync(new WriterGroupAddRequestModel {
@@ -753,47 +725,28 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                         .Where(o => o.Value["ClassType"] == "DataSetWriter")
                         .Where(o => o.Value["IsDisabled"] == false);
                 }
-
-                id = q
-                    .Replace("SELECT * FROM r WHERE r.WriterGroupId = '", "")
-                    .Replace("' AND r.ClassType = 'DataSetWriter'", "");
-                if (Guid.TryParse(id, out writerGroupId)) {
-                    // Get writers not disabled
-                    return v
-                        .Where(o => o.Value["WriterGroupId"] == writerGroupId.ToString())
-                        .Where(o => o.Value["ClassType"] == "DataSetWriter");
-                }
-
-                id = q
-                    .Replace("SELECT * FROM r WHERE r.DataSetWriterId = '", "")
-                    .Replace("' AND r.ClassType = 'DataSetEntity'", "");
-                if (Guid.TryParse(id, out dataSetWriterid)) {
-                    // Get variables and entities
-                    return v
-                        .Where(o => o.Value["DataSetWriterId"] == dataSetWriterid.ToString())
-                        .Where(o => o.Value["ClassType"] == "DataSetEntity");
-                }
-
-                var expected = "SELECT * FROM r WHERE r.ClassType = 'DataSetWriter'";
+                var expected =
+                    "SELECT * FROM r WHERE r.LastState = 'Pending' AND r.ClassType = 'WriterGroup'";
                 if (q == expected) {
                     // Get variables and entities
                     return v
-                        .Where(o => o.Value["ClassType"] == "DataSetWriter");
-                }
-
-                expected = "SELECT * FROM r WHERE r.ClassType = 'WriterGroup'";
-                if (q == expected) {
-                    // Get variables and entities
-                    return v
+                        .Where(o => o.Value["LastState"] == "Pending")
                         .Where(o => o.Value["ClassType"] == "WriterGroup");
                 }
 
+                expected =
+                    "SELECT * FROM r WHERE r.LastState = 'Disabled' AND r.ClassType = 'WriterGroup'";
+                if (q == expected) {
+                    // Get variables and entities
+                    return v
+                        .Where(o => o.Value["LastState"] == "Disabled")
+                        .Where(o => o.Value["ClassType"] == "WriterGroup");
+                }
                 throw new AssertActualExpectedException(null, q, "Query");
             })) {
 
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
                 IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
-                IWriterGroupRepository store = mock.Create<WriterGroupDatabase>();
 
                 // Act
                 var result1 = await groups.AddWriterGroupAsync(new WriterGroupAddRequestModel {
@@ -843,7 +796,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                 Assert.Equal(34u, group.MessageSettings.GroupVersion);
                 Assert.Equal(NetworkMessageContentMask.NetworkMessageHeader | NetworkMessageContentMask.DataSetClassId,
                     group.MessageSettings.NetworkMessageContentMask);
-                Assert.All(group.MessageSettings.PublishingOffset, b=> Assert.Equal(0.5, b));
+                Assert.All(group.MessageSettings.PublishingOffset, b => Assert.Equal(0.5, b));
                 Assert.Equal(0.5, group.MessageSettings.SamplingOffset);
                 Assert.Equal(NetworkMessageType.Uadp, group.MessageType);
                 Assert.Equal("New name", group.Name);
@@ -939,7 +892,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                         KeyFrameCount = 0,
                         MessageSettings = new DataSetWriterMessageSettingsModel {
                             ConfiguredSize = 0,
-                            DataSetMessageContentMask =0,
+                            DataSetMessageContentMask = 0,
                             DataSetOffset = 0,
                             NetworkMessageNumber = 0
                         },
@@ -951,9 +904,10 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                             PublishingInterval = TimeSpan.FromMinutes(0),
                             ResolveDisplayName = false
                         },
-                        User = new CredentialModel {}
+                        User = new CredentialModel { }
                     });
 
+                // Assert
                 writer = await service.GetDataSetWriterAsync(result2.DataSetWriterId);
                 Assert.Null(writer.KeyFrameInterval);
                 Assert.Null(writer.DataSetFieldContentMask);
@@ -977,6 +931,32 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                 Assert.Null(writer.MessageSettings.ConfiguredSize);
                 Assert.Null(writer.MessageSettings.DataSetOffset);
 
+                var foundGroups = await groups.QueryAllWriterGroupsAsync(new WriterGroupInfoQueryModel {
+                    State = WriterGroupState.Disabled
+                });
+                Assert.Single(foundGroups);
+
+                // Act
+                await groups.ActivateWriterGroupAsync(group.WriterGroupId);
+                foundGroups = await groups.QueryAllWriterGroupsAsync(new WriterGroupInfoQueryModel {
+                    State = WriterGroupState.Disabled
+                });
+                Assert.Empty(foundGroups);
+                foundGroups = await groups.QueryAllWriterGroupsAsync(new WriterGroupInfoQueryModel {
+                    State = WriterGroupState.Pending
+                });
+                Assert.Single(foundGroups);
+                await groups.DeactivateWriterGroupAsync(group.WriterGroupId);
+                foundGroups = await groups.QueryAllWriterGroupsAsync(new WriterGroupInfoQueryModel {
+                    State = WriterGroupState.Disabled
+                });
+                Assert.Single(foundGroups);
+                foundGroups = await groups.QueryAllWriterGroupsAsync(new WriterGroupInfoQueryModel {
+                    State = WriterGroupState.Pending
+                });
+                Assert.Empty(foundGroups);
+
+                // Act
                 await groups.UpdateWriterGroupAsync(group.WriterGroupId,
                     new WriterGroupUpdateRequestModel {
                         GenerationId = group.GenerationId,
@@ -1016,6 +996,67 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
         }
 
         [Fact]
+        public async Task ActivateDeactivateGroupTestAsync() {
+
+            using (var mock = Setup((v, q) => {
+                var expected =
+                    "SELECT * FROM r WHERE r.LastState = 'Pending' AND r.ClassType = 'WriterGroup'";
+                if (q == expected) {
+                    // Get variables and entities
+                    return v
+                        .Where(o => o.Value["LastState"] == "Pending")
+                        .Where(o => o.Value["ClassType"] == "WriterGroup");
+                }
+
+                expected =
+                    "SELECT * FROM r WHERE r.LastState = 'Disabled' AND r.ClassType = 'WriterGroup'";
+                if (q == expected) {
+                    // Get variables and entities
+                    return v
+                        .Where(o => o.Value["LastState"] == "Disabled")
+                        .Where(o => o.Value["ClassType"] == "WriterGroup");
+                }
+
+                throw new AssertActualExpectedException(null, q, "Query");
+            })) {
+
+                IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
+                IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
+
+                // Act
+                var result1 = await groups.AddWriterGroupAsync(new WriterGroupAddRequestModel {
+                    Name = "Test",
+                    SiteId = "fakesite" // See below
+                });
+
+                var foundGroups = await groups.QueryAllWriterGroupsAsync(new WriterGroupInfoQueryModel {
+                    State = WriterGroupState.Disabled
+                });
+                Assert.Single(foundGroups);
+
+                // Act
+                await groups.ActivateWriterGroupAsync(result1.WriterGroupId);
+                foundGroups = await groups.QueryAllWriterGroupsAsync(new WriterGroupInfoQueryModel {
+                    State = WriterGroupState.Disabled
+                });
+                Assert.Empty(foundGroups);
+                foundGroups = await groups.QueryAllWriterGroupsAsync(new WriterGroupInfoQueryModel {
+                    State = WriterGroupState.Pending
+                });
+                Assert.Single(foundGroups);
+                await groups.DeactivateWriterGroupAsync(result1.WriterGroupId);
+                foundGroups = await groups.QueryAllWriterGroupsAsync(new WriterGroupInfoQueryModel {
+                    State = WriterGroupState.Disabled
+                });
+                Assert.Single(foundGroups);
+                foundGroups = await groups.QueryAllWriterGroupsAsync(new WriterGroupInfoQueryModel {
+                    State = WriterGroupState.Pending
+                });
+                Assert.Empty(foundGroups);
+            }
+        }
+
+        [Fact]
         public async Task AddVariablesToDefaultDataSetWriterTestAsync() {
 
             var dataSetWriterId = "endpoint1";
@@ -1047,7 +1088,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
                 IDataSetBatchOperations batch = mock.Create<WriterGroupRegistry>();
                 IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
-                IWriterGroupRepository store = mock.Create<WriterGroupDatabase>();
 
                 var result = await batch.AddVariablesToDefaultDataSetWriterAsync(dataSetWriterId,
                     new DataSetAddVariableBatchRequestModel {

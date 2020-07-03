@@ -159,16 +159,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
                     Elements = document.FilterElements,
                 },
                 SelectedFields = document.SelectedFields,
-                State = document.LastResultChange == null ? null : new PublishedDataSetItemStateModel {
-                    LastResult = new ServiceResultModel {
-                        ErrorMessage = document.LastResultErrorMessage,
-                        Diagnostics = document.LastResultDiagnostics,
-                        StatusCode = document.LastResultStatusCode,
-                    },
-                    ServerId = document.ServerId,
-                    ClientId = document.ClientId,
-                    LastResultChange = document.LastResultChange
-                },
+                State = ToDataSetItemState(document),
                 Updated = document.Updated == null ? null : new PublisherOperationContextModel {
                     Time = document.Updated.Value,
                     AuthorityId = document.UpdatedAuditId
@@ -210,16 +201,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
                 SamplingInterval = document.SamplingInterval,
                 SubstituteValue = document.SubstituteValue?.Copy(),
                 TriggerId = document.TriggerId,
-                State = document.LastResultChange == null ? null : new PublishedDataSetItemStateModel {
-                    LastResult = new ServiceResultModel {
-                        ErrorMessage = document.LastResultErrorMessage,
-                        Diagnostics = document.LastResultDiagnostics,
-                        StatusCode = document.LastResultStatusCode,
-                    },
-                    ServerId = document.ServerId,
-                    ClientId = document.ClientId,
-                    LastResultChange = document.LastResultChange
-                },
+                State = ToDataSetItemState(document),
                 Updated = document.Updated == null ? null : new PublisherOperationContextModel {
                     Time = document.Updated.Value,
                     AuthorityId = document.UpdatedAuditId
@@ -228,6 +210,45 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
                     Time = document.Created.Value,
                     AuthorityId = document.CreatedAuditId
                 }
+            };
+        }
+
+        /// <summary>
+        /// Create state
+        /// </summary>
+        /// <param name="document"></param>
+        /// <returns></returns>
+        private static PublishedDataSetItemStateModel ToDataSetItemState(DataSetEntityDocument document) {
+            var lastResult = ToServiceResultModel(document);
+            if (lastResult == null &&
+                document.LastResultChange == null &&
+                (document.ServerId ?? 0u) == 0u &&
+                (document.ClientId ?? 0u) == 0u) {
+                return null;
+            }
+            return new PublishedDataSetItemStateModel {
+                LastResult = lastResult,
+                ServerId = document.ServerId == 0u ? null : document.ServerId,
+                ClientId = document.ClientId == 0u ? null : document.ClientId,
+                LastResultChange = document.LastResultChange
+            };
+        }
+
+        /// <summary>
+        /// Create service result model
+        /// </summary>
+        /// <param name="document"></param>
+        /// <returns></returns>
+        private static ServiceResultModel ToServiceResultModel(DataSetEntityDocument document) {
+            if (document.LastResultDiagnostics == null &&
+                document.LastResultStatusCode == null &&
+                string.IsNullOrEmpty(document.LastResultErrorMessage)) {
+                return null;
+            }
+            return new ServiceResultModel {
+                ErrorMessage = document.LastResultErrorMessage,
+                Diagnostics = document.LastResultDiagnostics,
+                StatusCode = document.LastResultStatusCode,
             };
         }
     }
