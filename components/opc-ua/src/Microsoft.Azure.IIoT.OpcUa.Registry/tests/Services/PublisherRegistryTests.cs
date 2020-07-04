@@ -68,6 +68,30 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
         }
 
         [Fact]
+        public void UpdatePublisherThatExists() {
+            CreatePublisherFixtures(out var site, out var publishers, out var modules);
+
+            using (var mock = AutoMock.GetLoose(builder => {
+                var hub = IoTHubServices.Create(modules);
+                builder.RegisterType<NewtonSoftJsonConverters>().As<IJsonSerializerConverterProvider>();
+                builder.RegisterType<NewtonSoftJsonSerializer>().As<IJsonSerializer>();
+                builder.RegisterInstance(hub).As<IIoTHubTwinServices>();
+            })) {
+                IPublisherRegistry service = mock.Create<PublisherRegistry>();
+
+                // Run
+                service.UpdatePublisherAsync(publishers.First().Id, new PublisherUpdateModel {
+                    LogLevel = TraceLogLevel.Debug
+                }).Wait();
+                var result = service.GetPublisherAsync(publishers.First().Id, false).Result;
+
+
+                // Assert
+                Assert.Equal(TraceLogLevel.Debug, result.LogLevel);
+            }
+        }
+
+        [Fact]
         public void ListAllPublishers() {
             CreatePublisherFixtures(out var site, out var publishers, out var modules);
 
@@ -233,6 +257,16 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
                 device = await hub.GetAsync(PublisherRegistryEx.ToDeviceId(groupid), null, default);
                 Assert.DoesNotContain(PublisherRegistryEx.ToPropertyName("dw1"), device.Properties.Desired.Keys);
                 Assert.DoesNotContain(PublisherRegistryEx.ToPropertyName("dw2"), device.Properties.Desired.Keys);
+
+                await writers.OnDataSetWriterUpdatedAsync(null, "dw2", new DataSetWriterInfoModel {
+                    DataSetWriterId = "dw2",
+                    WriterGroupId = groupid,
+                    IsDisabled = false
+                });
+
+                device = await hub.GetAsync(PublisherRegistryEx.ToDeviceId(groupid), null, default);
+                Assert.DoesNotContain(PublisherRegistryEx.ToPropertyName("dw1"), device.Properties.Desired.Keys);
+                Assert.Contains(PublisherRegistryEx.ToPropertyName("dw2"), device.Properties.Desired.Keys);
 
                 await writers.OnDataSetWriterRemovedAsync(null, new DataSetWriterInfoModel {
                     DataSetWriterId = "dw2",

@@ -65,6 +65,30 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
         }
 
         [Fact]
+        public void UpdateDiscovererThatExists() {
+            CreateDiscovererFixtures(out var site, out var discoverers, out var modules);
+
+            using (var mock = AutoMock.GetLoose(builder => {
+                var hub = IoTHubServices.Create(modules);
+                builder.RegisterType<NewtonSoftJsonConverters>().As<IJsonSerializerConverterProvider>();
+                builder.RegisterType<NewtonSoftJsonSerializer>().As<IJsonSerializer>();
+                builder.RegisterInstance(hub).As<IIoTHubTwinServices>();
+            })) {
+                IDiscovererRegistry service = mock.Create<DiscovererRegistry>();
+
+                // Run
+                service.UpdateDiscovererAsync(discoverers.First().Id, new DiscovererUpdateModel {
+                    LogLevel = TraceLogLevel.Debug
+                }).Wait();
+                var result = service.GetDiscovererAsync(discoverers.First().Id).Result;
+
+
+                // Assert
+                Assert.Equal(TraceLogLevel.Debug, result.LogLevel);
+            }
+        }
+
+        [Fact]
         public void ListAllDiscoverers() {
             CreateDiscovererFixtures(out _, out var discoverers, out var modules);
 

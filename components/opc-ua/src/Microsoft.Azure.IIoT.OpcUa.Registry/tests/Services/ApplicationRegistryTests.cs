@@ -73,6 +73,36 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
         }
 
         [Fact]
+        public void UpdateApplicationThatExists() {
+            CreateAppFixtures(out var site, out var super, out var apps, out var devices);
+            var first = apps.First();
+            var appId = ApplicationInfoModelEx.CreateApplicationId(site, first.ApplicationUri,
+                first.ApplicationType);
+
+            using (var mock = AutoMock.GetLoose(builder => {
+                var hub = IoTHubServices.Create(devices);
+                builder.RegisterType<NewtonSoftJsonConverters>().As<IJsonSerializerConverterProvider>();
+                builder.RegisterType<NewtonSoftJsonSerializer>().As<IJsonSerializer>();
+                builder.RegisterInstance(hub).As<IIoTHubTwinServices>();
+                builder.RegisterType<ApplicationTwins>().As<IApplicationRepository>();
+            })) {
+                IApplicationRegistry service = mock.Create<ApplicationRegistry>();
+
+                // Run
+                service.UpdateApplicationAsync(appId, new ApplicationRegistrationUpdateModel {
+                    ApplicationName = "TestName",
+                    DiscoveryProfileUri = "pu"
+                }).Wait();
+
+                var result = service.GetApplicationAsync(appId, false).Result;
+
+                // Assert
+                Assert.Equal("TestName", result.Application.ApplicationName);
+                Assert.Equal("pu", result.Application.DiscoveryProfileUri);
+            }
+        }
+
+        [Fact]
         public void ListAllApplications() {
             CreateAppFixtures(out var site, out var super, out var apps, out var devices);
 

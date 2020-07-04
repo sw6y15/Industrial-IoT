@@ -65,6 +65,30 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
         }
 
         [Fact]
+        public void UpdateSupervisorThatExists() {
+            CreateSupervisorFixtures(out var site, out var supervisors, out var modules);
+
+            using (var mock = AutoMock.GetLoose(builder => {
+                var hub = IoTHubServices.Create(modules);
+                builder.RegisterType<NewtonSoftJsonConverters>().As<IJsonSerializerConverterProvider>();
+                builder.RegisterType<NewtonSoftJsonSerializer>().As<IJsonSerializer>();
+                builder.RegisterInstance(hub).As<IIoTHubTwinServices>();
+            })) {
+                ISupervisorRegistry service = mock.Create<SupervisorRegistry>();
+
+                // Run
+                service.UpdateSupervisorAsync(supervisors.First().Id, new SupervisorUpdateModel {
+                    LogLevel = TraceLogLevel.Debug
+                }).Wait();
+                var result = service.GetSupervisorAsync(supervisors.First().Id, false).Result;
+
+
+                // Assert
+                Assert.Equal(TraceLogLevel.Debug, result.LogLevel);
+            }
+        }
+
+        [Fact]
         public void ListAllSupervisors() {
             CreateSupervisorFixtures(out var site, out var supervisors, out var modules);
 
