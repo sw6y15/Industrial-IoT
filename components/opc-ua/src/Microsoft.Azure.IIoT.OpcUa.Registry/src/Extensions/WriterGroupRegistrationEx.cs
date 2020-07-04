@@ -288,7 +288,37 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Models {
         /// </summary>
         /// <param name="registration"></param>
         /// <returns></returns>
-        public static EntityActivationStatusModel ToServiceModel(this WriterGroupRegistration registration) {
+        public static WriterGroupInfoModel ToServiceModel(this WriterGroupRegistration registration) {
+            if (registration == null) {
+                return null;
+            }
+            return new WriterGroupInfoModel {
+                BatchSize = registration.BatchSize,
+                PublishingInterval = registration.PublishingInterval,
+                HeaderLayoutUri = registration.HeaderLayoutUri,
+                WriterGroupId = registration.WriterGroupId,
+                KeepAliveTime = registration.KeepAliveTime,
+                LocaleIds = registration.LocaleIds.DecodeAsList(),
+                MaxNetworkMessageSize = registration.MaxNetworkMessageSize,
+                MessageType = registration.MessageType,
+                Priority = registration.Priority,
+                SiteId = registration.SiteId,
+                MessageSettings = new WriterGroupMessageSettingsModel {
+                    DataSetOrdering = registration.DataSetOrdering,
+                    GroupVersion = registration.GroupVersion,
+                    NetworkMessageContentMask = registration.NetworkMessageContentMask,
+                    PublishingOffset = registration.PublishingOffset.DecodeAsList(),
+                    SamplingOffset = registration.SamplingOffset
+                }
+            };
+        }
+
+        /// <summary>
+        /// Convert to status model
+        /// </summary>
+        /// <param name="registration"></param>
+        /// <returns></returns>
+        public static EntityActivationStatusModel ToStatusModel(this WriterGroupRegistration registration) {
             if (registration == null) {
                 return null;
             }

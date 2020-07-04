@@ -194,7 +194,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
                 ContinuationToken = devices.ContinuationToken,
                 Items = devices.Items
                     .Select(t => t.ToWriterGroupRegistration(false))
-                    .Select(s => s.ToServiceModel())
+                    .Select(s => s.ToStatusModel())
                     .ToList()
             };
         }
@@ -333,7 +333,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
             _logger.Debug("Activate group {id} event - Enable and place twin...",
                 writerGroup.WriterGroupId);
             var group = writerGroup.ToWriterGroupRegistration(false);
-            await _iothub.CreateOrUpdateAsync(group.ToDeviceTwin(_serializer), false);
+            await _iothub.CreateOrUpdateAsync(group.ToDeviceTwin(_serializer), true);
 
             // Immediately try assign writer group to a publisher
             await PlaceWriterGroupAsync(group, CancellationToken.None);
@@ -353,7 +353,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Services {
             _logger.Debug("Deactive group {id} event - Disable twin...",
                 writerGroup.WriterGroupId);
             var group = writerGroup.ToWriterGroupRegistration(true);
-            await _iothub.CreateOrUpdateAsync(group.ToDeviceTwin(_serializer), false);
+            await _iothub.CreateOrUpdateAsync(group.ToDeviceTwin(_serializer), true);
             _logger.Debug("Deactivate group {id} event - Twin disabled.",
                 writerGroup.WriterGroupId);
         }
