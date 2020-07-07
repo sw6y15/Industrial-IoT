@@ -711,9 +711,14 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                         null : request.HeaderLayoutUri;
                     updated = true;
                 }
-                if (request.MessageType != null) {
-                    existing.MessageType = request.MessageType == 0 ?
-                        null : request.MessageType;
+                if (request.Encoding != null) {
+                    existing.Encoding = request.Encoding == 0 ?
+                        null : request.Encoding;
+                    updated = true;
+                }
+                if (request.Schema != null) {
+                    existing.Schema = request.Schema == 0 ?
+                        null : request.Schema;
                     updated = true;
                 }
                 if (request.BatchSize != null) {
@@ -971,7 +976,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                             MaxNetworkMessageSize = 0,
                             Created = context,
                             Updated = context,
-                            MessageType = NetworkMessageType.Uadp
+                            Schema = MessageSchema.PubSub,
+                            Encoding = MessageEncoding.Uadp
                         };
                     }
                     return Task.FromResult(group);

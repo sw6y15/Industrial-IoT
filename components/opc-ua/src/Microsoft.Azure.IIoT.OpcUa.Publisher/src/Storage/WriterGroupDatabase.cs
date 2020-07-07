@@ -215,10 +215,15 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
 $"r.{nameof(WriterGroupDocument.GroupVersion)} = @version AND ";
                 queryParameters.Add("@version", query.GroupVersion.Value);
             }
-            if (query?.MessageType != null) {
+            if (query?.Encoding != null) {
                 queryString +=
-$"r.{nameof(WriterGroupDocument.MessageType)} = @messageType AND ";
-                queryParameters.Add("@messageType", query.MessageType.Value);
+$"r.{nameof(WriterGroupDocument.MessageEncoding)} = @encoding AND ";
+                queryParameters.Add("@encoding", query.Encoding.Value);
+            }
+            if (query?.Schema != null) {
+                queryString +=
+$"r.{nameof(WriterGroupDocument.Schema)} = @schema AND ";
+                queryParameters.Add("@schema", query.Schema.Value);
             }
             if (query?.Priority != null) {
                 queryString +=

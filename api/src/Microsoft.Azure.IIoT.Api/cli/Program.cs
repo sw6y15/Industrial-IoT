@@ -1413,7 +1413,8 @@ namespace Microsoft.Azure.IIoT.Api.Cli {
                 PublishingInterval = options.GetValueOrDefault<TimeSpan>("-p", "--publish", null),
                 HeaderLayoutUri = options.GetValueOrDefault<string>("-h", "--header", null),
                 KeepAliveTime = options.GetValueOrDefault<TimeSpan>("-k", "--keepalive", null),
-                MessageType = options.GetValueOrDefault<NetworkMessageType?>("-m", "--message", null),
+                Encoding = options.GetValueOrDefault<MessageEncoding?>("-e", "--encoding", null),
+                Schema = options.GetValueOrDefault<MessageSchema?>("-t", "--schema", null),
                 Priority = options.GetValueOrDefault<byte>("-P", "--priority", null),
                 SiteId = options.GetValueOrDefault<string>("-s", "--siteId", null),
                 // LocaleIds = ...
@@ -1450,7 +1451,8 @@ namespace Microsoft.Azure.IIoT.Api.Cli {
                     PublishingInterval = options.GetValueOrDefault<TimeSpan>("-P", "--publish", null),
                     HeaderLayoutUri = options.GetValueOrDefault<string>("-h", "--header", null),
                     KeepAliveTime = options.GetValueOrDefault<TimeSpan>("-k", "--keepalive", null),
-                    MessageType = options.GetValueOrDefault<NetworkMessageType?>("-m", "--message", null),
+                    Encoding = options.GetValueOrDefault<MessageEncoding?>("-e", "--encoding", null),
+                    Schema = options.GetValueOrDefault<MessageSchema?>("-t", "--schema", null),
                     Priority = options.GetValueOrDefault<byte>("-p", "--priority", null),
                     // LocaleIds = ...
                     MessageSettings = BuildWriterGroupMessageSettings(options)
@@ -1463,7 +1465,8 @@ namespace Microsoft.Azure.IIoT.Api.Cli {
         private async Task QueryWriterGroupsAsync(CliOptions options) {
             var query = new WriterGroupInfoQueryApiModel {
                 GroupVersion = options.GetValueOrDefault<uint>("-v", "--group-version", null),
-                MessageType = options.GetValueOrDefault<NetworkMessageType?>("-m", "--message", null),
+                Encoding = options.GetValueOrDefault<MessageEncoding?>("-e", "--encoding", null),
+                Schema = options.GetValueOrDefault<MessageSchema?>("-t", "--schema", null),
                 Name = options.GetValueOrDefault<string>("-n", "--name", null),
                 Priority = options.GetValueOrDefault<byte>("-p", "--priority", null),
                 SiteId = options.GetValueOrDefault<string>("-s", "--siteId", null)
@@ -3859,7 +3862,8 @@ Commands and Options
         with ...
         -s, --siteId    Site of the group
         -n, --name      Name of the group
-        -m, --message   Network message type
+        -t, --schema    Message schema
+        -e, --encoding  Message encoding
         -P, --priority  Group priority
         -V, --version   Group version
         -C, --continuation
@@ -3875,7 +3879,8 @@ Commands and Options
         -p, --publish   Publishing interval
         -h, --header    Network message header uri
         -k, --keepalive Keep alive interval
-        -m, --message   Network message type
+        -t, --schema    Message schema
+        -e, --encoding  Message encoding
         -P, --priority  Group priority
         -V, --version   Group version
         -S, --offset    Sampling offset
@@ -3897,7 +3902,8 @@ Commands and Options
         -p, --publish   Publishing interval
         -h, --header    Network message header uri
         -k, --keepalive Keep alive interval
-        -m, --message   Network message type
+        -t, --schema    Message schema
+        -e, --encoding  Message encoding
         -P, --priority  Group priority
         -V, --version   Group version
         -S, --offset    Sampling offset

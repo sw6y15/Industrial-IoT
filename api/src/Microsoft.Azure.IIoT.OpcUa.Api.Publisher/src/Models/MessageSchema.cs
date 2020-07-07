@@ -3,21 +3,25 @@
 //  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
+namespace Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Models {
+    using System.Runtime.Serialization;
 
     /// <summary>
-    /// Network message type
+    /// Message schema
     /// </summary>
-    public enum NetworkMessageType {
+    [DataContract]
+    public enum MessageSchema {
 
         /// <summary>
-        /// Json encoding
+        /// Network messages (default)
         /// </summary>
-        Json,
+        [EnumMember]
+        PubSub = 1,
 
         /// <summary>
-        /// Uadp encoding
+        /// Monitored item samples
         /// </summary>
-        Uadp
+        [EnumMember]
+        Samples
     }
 }

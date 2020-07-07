@@ -78,8 +78,8 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Runtime {
         /// <param name="configuration"></param>
         public Config(IConfiguration configuration) :
             base(configuration) {
-            _module = new ModuleConfig(configuration);
             _opc = new ClientServicesConfig(configuration);
+            _module = new ModuleConfig(configuration);
         }
 
         private readonly ClientServicesConfig _opc;

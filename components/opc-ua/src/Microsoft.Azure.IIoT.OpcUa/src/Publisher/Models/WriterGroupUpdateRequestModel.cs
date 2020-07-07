@@ -23,9 +23,14 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
         public string GenerationId { get; set; }
 
         /// <summary>
-        /// Updated message type
+        /// Message encoding to generate (publisher extension)
         /// </summary>
-        public NetworkMessageType? MessageType { get; set; }
+        public MessageEncoding? Encoding { get; set; }
+
+        /// <summary>
+        /// The message schema to use (publisher extension)
+        /// </summary>
+        public MessageSchema? Schema { get; set; }
 
         /// <summary>
         /// Updated network message configuration

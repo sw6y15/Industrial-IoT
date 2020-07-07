@@ -37,49 +37,56 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Models {
         /// <summary>
         /// Network message encoding to generate (publisher extension)
         /// </summary>
-        [DataMember(Name = "messageType", Order = 3,
+        [DataMember(Name = "encoding", Order = 3,
             EmitDefaultValue = false)]
-        public NetworkMessageType? MessageType { get; set; }
+        public MessageEncoding? Encoding { get; set; }
+
+        /// <summary>
+        /// The message schema to use (publisher extension)
+        /// </summary>
+        [DataMember(Name = "schema", Order = 4,
+            EmitDefaultValue = false)]
+        public MessageSchema? Schema { get; set; }
 
         /// <summary>
         /// Header layout uri
         /// </summary>
-        [DataMember(Name = "headerLayoutUri", Order = 4,
+        [DataMember(Name = "headerLayoutUri", Order = 5,
             EmitDefaultValue = false)]
         public string HeaderLayoutUri { get; set; }
 
         /// <summary>
         /// Batch buffer size
         /// </summary>
-        [DataMember(Name = "batchSize", Order = 5,
+        [DataMember(Name = "batchSize", Order = 6,
             EmitDefaultValue = false)]
         public int? BatchSize { get; set; }
 
         /// <summary>
         /// Publishing interval
         /// </summary>
-        [DataMember(Name = "publishingInterval", Order = 6,
+        [DataMember(Name = "publishingInterval", Order = 7,
             EmitDefaultValue = false)]
         public TimeSpan? PublishingInterval { get; set; }
 
         /// <summary>
         /// Keep alive time
         /// </summary>
-        [DataMember(Name = "keepAliveTime", Order = 7,
+        [DataMember(Name = "keepAliveTime", Order = 8,
             EmitDefaultValue = false)]
         public TimeSpan? KeepAliveTime { get; set; }
 
         /// <summary>
         /// Network message detailed settings.
         /// </summary>
-        [DataMember(Name = "messageSettings", Order = 8,
+        [DataMember(Name = "messageSettings", Order = 9,
             EmitDefaultValue = false)]
         public WriterGroupMessageSettingsApiModel MessageSettings { get; set; }
 
         /// <summary>
         /// Locales to use
         /// </summary>
-        [DataMember(Name = "localeIds", Order = 9,
+        [DataMember(Name = "localeIds", Order = 10,
             EmitDefaultValue = false)]
         public List<string> LocaleIds { get; set; }
     }

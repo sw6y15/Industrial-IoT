@@ -26,9 +26,14 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
         public uint? GroupVersion { get; set; }
 
         /// <summary>
-        /// And with this message encoding
+        /// Return groups only with this encoding
         /// </summary>
-        public NetworkMessageType? MessageType { get; set; }
+        public MessageEncoding? Encoding { get; set; }
+
+        /// <summary>
+        /// Return groups only with this message schema
+        /// </summary>
+        public MessageSchema? Schema { get; set; }
 
         /// <summary>
         /// Return groups in the specified state

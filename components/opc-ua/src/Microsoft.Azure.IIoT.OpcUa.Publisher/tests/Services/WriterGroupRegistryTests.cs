@@ -780,7 +780,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                             },
                             SamplingOffset = 0.5
                         },
-                        MessageType = NetworkMessageType.Uadp,
+                        Encoding = MessageEncoding.Uadp,
+                        Schema = MessageSchema.Samples,
                         Name = "New name",
                         Priority = 66,
                         PublishingInterval = TimeSpan.FromMilliseconds(566)
@@ -798,7 +799,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                     group.MessageSettings.NetworkMessageContentMask);
                 Assert.All(group.MessageSettings.PublishingOffset, b => Assert.Equal(0.5, b));
                 Assert.Equal(0.5, group.MessageSettings.SamplingOffset);
-                Assert.Equal(NetworkMessageType.Uadp, group.MessageType);
+                Assert.Equal(MessageEncoding.Uadp, group.Encoding);
+                Assert.Equal(MessageSchema.Samples, group.Schema);
                 Assert.Equal("New name", group.Name);
                 Assert.Equal((byte)66, group.Priority);
                 Assert.Equal(TimeSpan.FromMilliseconds(566), group.PublishingInterval);
@@ -971,7 +973,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                             PublishingOffset = new List<double>(),
                             SamplingOffset = 0.0
                         },
-                        MessageType = NetworkMessageType.Json,
+                        Encoding = 0,
+                        Schema = 0,
                         Name = "",
                         Priority = 0,
                         PublishingInterval = TimeSpan.FromMilliseconds(0)
@@ -988,7 +991,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                 Assert.Null(group.MessageSettings.NetworkMessageContentMask);
                 Assert.Null(group.MessageSettings.PublishingOffset);
                 Assert.Null(group.MessageSettings.SamplingOffset);
-                Assert.Null(group.MessageType);
+                Assert.Null(group.Encoding);
+                Assert.Null(group.Schema);
                 Assert.Null(group.Name);
                 Assert.Null(group.Priority);
                 Assert.Null(group.PublishingInterval);

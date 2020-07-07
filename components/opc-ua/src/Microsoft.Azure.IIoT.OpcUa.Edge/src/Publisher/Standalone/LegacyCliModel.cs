@@ -47,16 +47,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Models {
         public TimeSpan? DefaultPublishingInterval { get; set; }
 
         /// <summary>
-        /// Message type for pub/sub messages
-        /// </summary>
-        public NetworkMessageType? NetworkMessageType { get; set; }
-
-        /// <summary>
-        /// The message schema to use
-        /// </summary>
-        public string MessageSchema { get; set; }
-
-        /// <summary>
         /// Flag wether to grab the display name of nodes form
         /// the OPC UA Server.
         /// </summary>
@@ -111,6 +101,16 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Models {
         /// The operation timeout.
         /// </summary>
         public TimeSpan? OperationTimeout { get; set; }
+
+        /// <summary>
+        /// The messaging mode for outgoing messages.
+        /// </summary>
+        public MessageSchema Schema { get; set; } = MessageSchema.Samples;
+
+        /// <summary>
+        /// The messaging mode for outgoing messages.
+        /// </summary>
+        public MessageEncoding Encoding { get; set; } = MessageEncoding.Json;
 
         /// <summary>
         /// Flag to demand full featured message creation from publisher

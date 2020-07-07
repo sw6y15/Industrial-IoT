@@ -3,26 +3,31 @@
 //  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
+namespace Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Models {
+    using System.Runtime.Serialization;
 
     /// <summary>
-    /// Monitoring modes
+    /// Message encoding
     /// </summary>
-    public enum MonitoringMode {
+    [DataContract]
+    public enum MessageEncoding {
 
         /// <summary>
-        /// Disabled
+        /// Ua Json encoding
         /// </summary>
-        Disabled,
+        [EnumMember]
+        Json = 1,
 
         /// <summary>
-        /// Sampling
+        /// Ua binary encoding
         /// </summary>
-        Sampling,
+        [EnumMember]
+        Binary,
 
         /// <summary>
-        /// Reporting
+        /// Uadp encoding
         /// </summary>
-        Reporting
+        [EnumMember]
+        Uadp,
     }
 }

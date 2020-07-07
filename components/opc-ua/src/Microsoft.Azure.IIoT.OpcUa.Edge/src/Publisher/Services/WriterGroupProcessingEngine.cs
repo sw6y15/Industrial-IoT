@@ -29,6 +29,23 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
     public class WriterGroupProcessingEngine : IWriterGroupProcessingEngine,
         IDisposable {
 
+        /// <summary>
+        /// Publisher id
+        /// </summary>
+        internal string PublisherId {
+            get {
+                var moduleId = _events.ModuleId;
+                var deviceId = _events.DeviceId;
+                if (string.IsNullOrEmpty(moduleId)) {
+                    if (string.IsNullOrEmpty(deviceId)) {
+                        return null;
+                    }
+                    return deviceId;
+                }
+                return deviceId + "_" + moduleId;
+            }
+        }
+
         /// <inheritdoc/>
         public string WriterGroupId {
             get {
@@ -88,25 +105,20 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             }
         }
 
-        /// <summary>
-        /// Publisher id
-        /// </summary>
-        internal string PublisherId {
-            get {
-                var moduleId = _events.ModuleId;
-                var deviceId = _events.DeviceId;
-                if (string.IsNullOrEmpty(moduleId)) {
-                    if (string.IsNullOrEmpty(deviceId)) {
-                        return null;
-                    }
-                    return deviceId;
+        /// <inheritdoc/>
+        public string MessageSchema {
+            get => _encoder?.MessageScheme;
+            set {
+                // Set new decoder
+                if (value != null && _encoders.TryGetValue(value, out var encoder)) {
+                    _encoder = encoder;
                 }
-                return deviceId + "_" + moduleId;
+                else {
+                    // Unset encoder
+                    _encoder = null;
+                }
             }
         }
-
-        /// <inheritdoc/>
-        public string MessageSchema { get; set; }
 
         /// <inheritdoc/>
         public string HeaderLayoutUri { get; set; }
@@ -264,14 +276,14 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                 _cts = new CancellationTokenSource();
 
                 // Input
-                _inputBlock = new BatchBlock<DataSetMessageModel>(
+                _inputBlock = new BatchBlock<DataSetWriterMessageModel>(
                     _outer.BatchSize.Value, new GroupingDataflowBlockOptions {
                         CancellationToken = _cts.Token,
                         EnsureOrdered = true
                     });
 
                 // Encoder
-                _encodingBlock = new TransformManyBlock<DataSetMessageModel[], NetworkMessageModel>(
+                _encodingBlock = new TransformManyBlock<DataSetWriterMessageModel[], NetworkMessageModel>(
                     EncodeAsync,
                     new ExecutionDataflowBlockOptions {
                         SingleProducerConstrained = true,
@@ -309,7 +321,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             /// process message
             /// </summary>
             /// <param name="message"></param>
-            public void Enqueue(DataSetMessageModel message) {
+            public void Enqueue(DataSetWriterMessageModel message) {
                 _inputBlock.Post(message);
             }
 
@@ -342,7 +354,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             /// </summary>
             /// <param name="messages"></param>
             /// <returns></returns>
-            private IEnumerable<NetworkMessageModel> EncodeAsync(DataSetMessageModel[] messages) {
+            private IEnumerable<NetworkMessageModel> EncodeAsync(DataSetWriterMessageModel[] messages) {
                 if (_batchTriggerInterval != null && _batchTriggerInterval.Value > TimeSpan.Zero) {
                     _batchTriggerIntervalTimer.Change(_batchTriggerInterval.Value, Timeout.InfiniteTimeSpan);
                 }
@@ -375,9 +387,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             private readonly WriterGroupProcessingEngine _outer;
             private readonly ILogger _logger;
             private readonly Timer _batchTriggerIntervalTimer;
-            private readonly BatchBlock<DataSetMessageModel> _inputBlock;
+            private readonly BatchBlock<DataSetWriterMessageModel> _inputBlock;
             private readonly CancellationTokenSource _cts;
-            private readonly TransformManyBlock<DataSetMessageModel[], NetworkMessageModel> _encodingBlock;
+            private readonly TransformManyBlock<DataSetWriterMessageModel[], NetworkMessageModel> _encodingBlock;
             private readonly ActionBlock<NetworkMessageModel> _sinkBlock;
             private readonly string _iotHubMessageSinkGuid = Guid.NewGuid().ToString();
             private long _sentCompleteCount;
@@ -641,7 +653,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             uint sequenceNumber, SubscriptionNotificationModel notification) {
             try {
                 var notifications = notification.Notifications.ToList();
-                var message = new DataSetMessageModel {
+                var message = new DataSetWriterMessageModel {
                     // TODO: Filter changes on the monitored items contained in the template
                     Notifications = notifications,
                     ServiceMessageContext = notification.ServiceMessageContext,
@@ -668,11 +680,11 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        private IEnumerable<NetworkMessageModel> EncodeMessages(IEnumerable<DataSetMessageModel> input) {
-            // Select encoder
-            if (MessageSchema == null || !_encoders.TryGetValue(MessageSchema, out var encoder)) {
-                // Use first encoder
-                encoder = _encoders.First().Value;
+        private IEnumerable<NetworkMessageModel> EncodeMessages(
+            IEnumerable<DataSetWriterMessageModel> input) {
+            var encoder = _encoder;
+            if (encoder == null) {
+                encoder = _encoders.First().Value; // Select first encoder
             }
             if (BatchSize.Value == 1) {
                 return encoder.Encode(input, (int)MaxNetworkMessageSize.Value);
@@ -689,6 +701,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
 
         // State
         private readonly ConcurrentDictionary<string, DataSetWriterSubscription> _writers;
+        private INetworkMessageEncoder _encoder;
         private uint? _maxEncodedMessageSize;
         private int? _batchSize;
         private TimeSpan? _publishingInterval;
@@ -715,8 +728,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             var notificationsProcessedCount = _encoders.Values.Sum(e => e.NotificationsProcessedCount);
             var messagesProcessedCount = _encoders.Values.Sum(e => e.MessagesProcessedCount);
             var notificationsDroppedCount = _encoders.Values.Sum(e => e.NotificationsDroppedCount);
-            var avgNotificationsPerMessage = _encoders.Values.Sum(e => e.AvgNotificationsPerMessage);
-            var avgMessageSize = _encoders.Values.Sum(e => e.AvgMessageSize);
+
+            var avgNotificationsPerMessage = _encoder.AvgNotificationsPerMessage;
+            var avgMessageSize = _encoder.AvgMessageSize;
 
             var diagInfo = new StringBuilder();
             diagInfo.AppendLine();

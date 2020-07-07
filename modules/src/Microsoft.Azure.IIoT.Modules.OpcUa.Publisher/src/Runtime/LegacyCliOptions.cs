@@ -10,6 +10,7 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Runtime {
     using Microsoft.Azure.IIoT.OpcUa.Core;
     using Microsoft.Azure.IIoT.Diagnostics;
     using Microsoft.Azure.IIoT.Module.Framework;
+    using Microsoft.Azure.Devices.Client;
     using Microsoft.Extensions.Configuration;
     using Mono.Options;
     using Opc.Ua;
@@ -73,6 +74,10 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Runtime {
                         "event setting of nodes without a skip first event setting.",
                         (bool b) => this[LegacyCliConfigKeys.SkipFirstDefault] = b.ToString() },
 
+                    { "fm|fullfeaturedmessage=", "The full featured mode for messages (all fields filled in)." +
+                        "Default is 'true', for legacy compatibility use 'false'",
+                        (bool b) => this[LegacyCliConfigKeys.FullFeaturedMessage] = b.ToString() },
+
                     // Client settings
                     { "ot|operationtimeout=", "The operation timeout of the publisher OPC UA client in ms.",
                         (uint i) => this[LegacyCliConfigKeys.OpcOperationTimeout] = TimeSpan.FromMilliseconds(i).ToString() },
@@ -134,15 +139,12 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Runtime {
                     // testing purposes
                     { "sc|scaletestcount=", "The number of monitored item clones in scale tests.",
                         (int i) => this[LegacyCliConfigKeys.ScaleTestCount] = i.ToString() },
-
+                    { "mm|messagingmode=", "The messaging scheme " +
+                        $"(allowed values: {string.Join(", ", Enum.GetNames(typeof(MessageSchema)))}).",
+                        (MessageSchema m) => this[LegacyCliConfigKeys.Schema] = m.ToString() },
                     { "me|messageencoding=", "The message encoding for messages " +
-                        $"(allowed values: {string.Join(", ", Enum.GetNames(typeof(NetworkMessageType)))}).",
-                        (NetworkMessageType m) => this[LegacyCliConfigKeys.NetworkMessageType] = m.ToString() },
-                    { "mt|messagetype=", "The message schema type to produce.",
-                        (string m) => this[LegacyCliConfigKeys.MessageSchemaType] = m },
-                    { "fm|fullfeaturedmessage=", "The full featured mode for messages (all fields filled in)." +
-                        "Default is 'true', for legacy compatibility use 'false'",
-                        (bool b) => this[LegacyCliConfigKeys.FullFeaturedMessage] = b.ToString() },
+                        $"(allowed values: {string.Join(", ", Enum.GetNames(typeof(MessageEncoding)))}).",
+                        (MessageEncoding m) => this[LegacyCliConfigKeys.Encoding] = m.ToString() },
 
                     // Legacy unsupported
                     { "s|site=", "Legacy - do not use.", _ => {} },
@@ -221,9 +223,9 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Runtime {
                 DiagnosticsInterval = GetValueOrDefault(LegacyCliConfigKeys.DiagnosticsInterval, TimeSpan.FromSeconds(60)),
                 LogFileFlushTimeSpan = GetValueOrDefault(LegacyCliConfigKeys.LogFileFlushTimeSpanSec, TimeSpan.FromSeconds(30)),
                 LogFilename = GetValueOrDefault<string>(LegacyCliConfigKeys.LogFileName, null),
-                Transport = GetValueOrDefault(LegacyCliConfigKeys.HubTransport, "Mqtt"),
-                NetworkMessageType = GetValueOrDefault<NetworkMessageType?>(LegacyCliConfigKeys.NetworkMessageType, null),
-                MessageSchema = GetValueOrDefault(LegacyCliConfigKeys.MessageSchemaType, MessageSchemaTypes.MonitoredItemMessageJson),
+                Transport = GetValueOrDefault(LegacyCliConfigKeys.HubTransport, TransportType.Mqtt.ToString()),
+                Schema = GetValueOrDefault(LegacyCliConfigKeys.Schema, MessageSchema.Samples),
+                Encoding = GetValueOrDefault(LegacyCliConfigKeys.Encoding, MessageEncoding.Json),
                 FullFeaturedMessage = GetValueOrDefault(LegacyCliConfigKeys.FullFeaturedMessage, false),
                 EdgeHubConnectionString = GetValueOrDefault<string>(LegacyCliConfigKeys.EdgeHubConnectionString, null),
                 OperationTimeout = GetValueOrDefault(LegacyCliConfigKeys.OpcOperationTimeout, TimeSpan.FromSeconds(15)),
@@ -244,6 +246,13 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Runtime {
             };
         }
 
+        /// <summary>
+        /// Helper to get default value
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="key"></param>
+        /// <param name="defaultValue"></param>
+        /// <returns></returns>
         private T GetValueOrDefault<T>(string key, T defaultValue) {
             if (!ContainsKey(key)) {
                 return defaultValue;

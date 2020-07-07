@@ -39,14 +39,14 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Runtime {
         public const string SkipFirstDefault = "DefaultSkipFirst";
 
         /// <summary>
-        /// Network message type for pub/sub messages
+        /// Key for the message schema
         /// </summary>
-        public const string NetworkMessageType = "NetworkMessageType";
+        public const string Schema = "MessageSchema";
 
         /// <summary>
-        /// Key for the messaging schema type
+        /// Key for the message encoding
         /// </summary>
-        public const string MessageSchemaType = "MessageSchemaType";
+        public const string Encoding = "MessageEncoding";
 
         /// <summary>
         /// Flag to demand full featured message creation from publisher

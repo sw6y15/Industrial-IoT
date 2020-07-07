@@ -42,7 +42,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
 
         /// <inheritdoc/>
         public IEnumerable<NetworkMessageModel> EncodeBatch(
-            IEnumerable<DataSetMessageModel> messages, int maxMessageSize) {
+            IEnumerable<DataSetWriterMessageModel> messages, int maxMessageSize) {
 
             // by design all messages are generated in the same session context,
             // therefore it is safe to get the first message's context
@@ -105,7 +105,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
 
         /// <inheritdoc/>
         public IEnumerable<NetworkMessageModel> Encode(
-            IEnumerable<DataSetMessageModel> messages, int maxMessageSize) {
+            IEnumerable<DataSetWriterMessageModel> messages, int maxMessageSize) {
             // by design all messages are generated in the same session context,
             // therefore it is safe to get the first message's context
             var encodingContext = messages.FirstOrDefault(m => m.ServiceMessageContext != null)
@@ -148,7 +148,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         /// <param name="context"></param>
         /// <returns></returns>
         private IEnumerable<NetworkMessage> GetNetworkMessages(
-            IEnumerable<DataSetMessageModel> messages, ServiceMessageContext context) {
+            IEnumerable<DataSetWriterMessageModel> messages, ServiceMessageContext context) {
             if (context?.NamespaceUris == null) {
                 // declare all notifications in messages dropped
                 foreach (var message in messages) {
@@ -162,7 +162,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             foreach (var message in messages) {
                 var networkMessage = new NetworkMessage() {
                     MessageContentMask = ((NetworkMessageContentMask?)message.ContentMask)
-                        .ToStackType(NetworkMessageType.Uadp),
+                        .ToStackType(MessageEncoding.Uadp),
                     PublisherId = message.PublisherId,
                     DataSetClassId = message.Writer?.DataSet?
                         .DataSetMetaData?.DataSetClassId.ToString(),
@@ -187,7 +187,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                                 .ConfigurationVersion?.MinorVersion ?? 0
                         },
                         MessageContentMask = (message.Writer?.MessageSettings?.DataSetMessageContentMask)
-                            .ToStackType(NetworkMessageType.Uadp),
+                            .ToStackType(MessageEncoding.Uadp),
                         Timestamp = message.TimeStamp ?? DateTime.UtcNow,
                         SequenceNumber = message.SequenceNumber,
                         Status = payload.Values.Any(s => StatusCode.IsNotGood(s.StatusCode)) ?

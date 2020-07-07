@@ -114,10 +114,16 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
         public TimeSpan? KeepAliveTime { get; set; }
 
         /// <summary>
-        /// Network message types to generate
+        /// Encoding to generate
         /// </summary>
         [DataMember]
-        public NetworkMessageType? MessageType { get; set; }
+        public MessageEncoding? MessageEncoding { get; set; }
+
+        /// <summary>
+        /// The messaging mode for outgoing messages.
+        /// </summary>
+        [DataMember]
+        public MessageSchema? Schema { get; set; }
 
         /// <summary>
         /// Batch buffer size

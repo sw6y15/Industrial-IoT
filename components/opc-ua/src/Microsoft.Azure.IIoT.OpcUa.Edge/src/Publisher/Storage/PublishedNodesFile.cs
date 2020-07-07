@@ -8,6 +8,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
     using Microsoft.Azure.IIoT.OpcUa.Publisher.Models;
     using Microsoft.Azure.IIoT.OpcUa.Protocol.Models;
     using Microsoft.Azure.IIoT.OpcUa.Core.Models;
+    using Microsoft.Azure.IIoT.OpcUa.Core;
     using Microsoft.Azure.IIoT.Crypto;
     using Microsoft.Azure.IIoT.Serializers;
     using Serilog;
@@ -91,7 +92,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             sw.Restart();
 
             var writerGroup = new WriterGroupModel {
-                MessageType = _legacyCliModel.NetworkMessageType,
+                Encoding = _legacyCliModel.Encoding,
+                Schema = _legacyCliModel.Schema,
                 PublishingInterval = _legacyCliModel.BatchTriggerInterval,
                 BatchSize = _legacyCliModel.BatchSize,
                 MaxNetworkMessageSize = _legacyCliModel.MaxMessageSize,

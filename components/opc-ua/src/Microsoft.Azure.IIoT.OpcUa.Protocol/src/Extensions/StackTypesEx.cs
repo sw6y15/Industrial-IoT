@@ -614,7 +614,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol {
         /// <param name="mask"></param>
         /// <param name="encoding"></param>
         /// <returns></returns>
-        public static uint ToStackType(this NetworkMessageContentMask? mask, NetworkMessageType? encoding) {
+        public static uint ToStackType(this NetworkMessageContentMask? mask, MessageEncoding? encoding) {
             if (mask == null) {
                 mask =
                     NetworkMessageContentMask.NetworkMessageHeader |
@@ -624,9 +624,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol {
                     NetworkMessageContentMask.DataSetClassId;
             }
             switch (encoding) {
-                case NetworkMessageType.Uadp:
+                case MessageEncoding.Uadp:
                     return (uint)ToUadpStackType(mask.Value);
-                case NetworkMessageType.Json:
+                case MessageEncoding.Json:
                     return (uint)ToJsonStackType(mask.Value);
             }
             return (uint)ToJsonStackType(mask.Value);
@@ -638,7 +638,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol {
         /// <param name="mask"></param>
         /// <param name="encoding"></param>
         /// <returns></returns>
-        public static uint ToStackType(this DataSetContentMask? mask, NetworkMessageType? encoding) {
+        public static uint ToStackType(this DataSetContentMask? mask, MessageEncoding? encoding) {
             if (mask == null) {
                 mask =
                     DataSetContentMask.DataSetWriterId |
@@ -650,9 +650,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol {
                     DataSetContentMask.Status;
             }
             switch (encoding) {
-                case NetworkMessageType.Uadp:
+                case MessageEncoding.Uadp:
                     return (uint)ToUadpStackType(mask.Value);
-                case NetworkMessageType.Json:
+                case MessageEncoding.Json:
                     return (uint)ToJsonStackType(mask.Value);
             }
             return (uint)ToJsonStackType(mask.Value);

@@ -5,9 +5,7 @@
 
 namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher {
     using Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Models;
-    using Microsoft.Azure.IIoT.OpcUa.Publisher.Models;
     using System.Collections.Generic;
-    using System.Threading.Tasks;
 
     /// <summary>
     /// Encoder to encode data set writer messages
@@ -51,7 +49,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher {
         /// <param name="maxMessageSize"></param>
         /// <returns></returns>
         IEnumerable<NetworkMessageModel> Encode(
-            IEnumerable<DataSetMessageModel> message, int maxMessageSize);
+            IEnumerable<DataSetWriterMessageModel> message, int maxMessageSize);
 
         /// <summary>
         /// Encodes the list of messages into batched message list
@@ -60,6 +58,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher {
         /// <param name="maxMessageSize"></param>
         /// <returns></returns>
         IEnumerable<NetworkMessageModel> EncodeBatch(
-            IEnumerable<DataSetMessageModel> messages, int maxMessageSize);
+            IEnumerable<DataSetWriterMessageModel> messages, int maxMessageSize);
     }
 }

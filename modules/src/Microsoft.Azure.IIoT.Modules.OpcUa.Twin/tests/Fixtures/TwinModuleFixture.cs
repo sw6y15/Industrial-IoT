@@ -276,9 +276,6 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Twin.Tests {
             /// <inheritdoc/>
             public TransportOption Transport => TransportOption.Any;
 
-            /// <inheritdoc/>
-            public bool EnableMetrics => false;
-
             private readonly DeviceModel _device;
         }
 

@@ -106,9 +106,10 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Models {
         public TimeSpan? KeepAliveTime { get; set; }
 
         /// <summary>
-        /// Network message types to generate (publisher extension)
+        /// Message encoding
         /// </summary>
-        public NetworkMessageType? MessageType { get; set; }
+        [DataMember]
+        public string MessageSchema { get; set; }
 
         /// <summary>
         /// Batch buffer size
@@ -127,7 +128,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Models {
             if (SiteId != registration.SiteId) {
                 return false;
             }
-            if (MessageType != registration.MessageType) {
+            if (MessageSchema != registration.MessageSchema) {
                 return false;
             }
             if (KeepAliveTime != registration.KeepAliveTime) {
@@ -190,7 +191,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Models {
             hashCode = (hashCode * -1521134295) +
                 EqualityComparer<string>.Default.GetHashCode(SiteId);
             hashCode = (hashCode * -1521134295) +
-                EqualityComparer<NetworkMessageType?>.Default.GetHashCode(MessageType);
+                EqualityComparer<string>.Default.GetHashCode(MessageSchema);
             hashCode = (hashCode * -1521134295) +
                 EqualityComparer<TimeSpan?>.Default.GetHashCode(KeepAliveTime);
             hashCode = (hashCode * -1521134295) +

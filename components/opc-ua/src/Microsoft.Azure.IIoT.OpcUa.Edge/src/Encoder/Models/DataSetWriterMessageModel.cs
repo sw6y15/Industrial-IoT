@@ -13,7 +13,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Models {
     /// <summary>
     /// Data set message emitted by writer in a writer group.
     /// </summary>
-    public class DataSetMessageModel {
+    public class DataSetWriterMessageModel {
 
         /// <summary>
         /// Sequence number of the event

@@ -34,23 +34,30 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Models {
         public uint? GroupVersion { get; set; }
 
         /// <summary>
-        /// And with this message encoding
+        /// Return groups only with this encoding
         /// </summary>
-        [DataMember(Name = "messageType", Order = 3,
+        [DataMember(Name = "encoding", Order = 3,
             EmitDefaultValue = false)]
-        public NetworkMessageType? MessageType { get; set; }
+        public MessageEncoding? Encoding { get; set; }
+
+        /// <summary>
+        /// Return groups only with this message schema
+        /// </summary>
+        [DataMember(Name = "schema", Order = 4,
+            EmitDefaultValue = false)]
+        public MessageSchema? Schema { get; set; }
 
         /// <summary>
         /// Return groups only in the specified state
         /// </summary>
-        [DataMember(Name = "state", Order = 4,
+        [DataMember(Name = "state", Order = 5,
             EmitDefaultValue = false)]
         public WriterGroupState? State { get; set; }
 
         /// <summary>
         /// Return groups with this priority
         /// </summary>
-        [DataMember(Name = "priority", Order = 5,
+        [DataMember(Name = "priority", Order = 6,
             EmitDefaultValue = false)]
         public byte? Priority { get; set; }
     }

@@ -4,7 +4,7 @@
 // ------------------------------------------------------------
 
 namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
-    using Microsoft.Azure.IIoT.OpcUa.Core;
+    using Microsoft.Azure.IIoT.OpcUa.Publisher.Models;
     using Microsoft.Azure.IIoT.Crypto;
     using Microsoft.Azure.IIoT.Serializers;
     using Microsoft.Azure.IIoT.Utils;
@@ -15,6 +15,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
     using System.Security.Cryptography;
     using System.Linq;
     using System.Threading.Tasks;
+    using Microsoft.Azure.IIoT.OpcUa.Core;
 
     /// <summary>
     /// Loads published nodes file and configures the engine
@@ -45,13 +46,10 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
 
             _diagnosticInterval =
                 legacyCliModel?.LegacyCliModel?.DiagnosticsInterval;
-            _messageSchema =
-                legacyCliModel?.LegacyCliModel?.MessageSchema;
-
-            if (string.IsNullOrEmpty(_messageSchema)) {
-                // Default
-                _messageSchema = MessageSchemaTypes.MonitoredItemMessageJson;
-            }
+            _messagingMode =
+                legacyCliModel?.LegacyCliModel?.Schema ?? MessageSchema.Samples;
+            _messageEncoding =
+                legacyCliModel?.LegacyCliModel?.Encoding ?? MessageEncoding.Json;
 
             var directory = Path.GetDirectoryName(_file.FileName);
             var file = Path.GetFileName(_file.FileName);
@@ -64,7 +62,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         /// <inheritdoc/>
         public Task StartAsync() {
             _engine.DiagnosticsInterval = _diagnosticInterval;
-            _engine.MessageSchema = _messageSchema;
 
             OnPublishedNodesFileChanged(null, null); // load first time
 
@@ -83,7 +80,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             _engine.RemoveAllWriters();
 
             _engine.DiagnosticsInterval = null;
-            _engine.MessageSchema = null;
             return Task.CompletedTask;
         }
 
@@ -125,6 +121,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                             _engine.HeaderLayoutUri = group.HeaderLayoutUri;
                             _engine.KeepAliveTime = group.KeepAliveTime;
                             _engine.MaxNetworkMessageSize = group.MaxNetworkMessageSize;
+
+                            _engine.MessageSchema = MessageSchemaEx.ToMessageSchemaMimeType(
+                                group.Schema, group.Encoding);
 
                             _engine.NetworkMessageContentMask =
                                 group.MessageSettings?.NetworkMessageContentMask;
@@ -177,7 +176,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         private readonly ILogger _logger;
         private readonly object _fileLock = new object();
         private readonly TimeSpan? _diagnosticInterval;
-        private readonly string _messageSchema;
+        private readonly MessageSchema _messagingMode;
+        private readonly MessageEncoding _messageEncoding;
         private string _lastKnownFileHash;
         private HashSet<string> _lastSetOfWriterIds;
     }
