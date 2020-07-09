@@ -111,7 +111,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
 
             public BlockingCollection<T> Events { get; } = new BlockingCollection<T>();
 
-            public T WaitForEvent(Predicate<T> predicate, int timeout = 20000) {
+            public T WaitForEvent(Predicate<T> predicate, int timeout = 200000) {
                 T result;
                 while (Events.TryTake(out result, timeout)) {
                     if (predicate(result)) {
@@ -121,7 +121,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                 return default;
             }
 
-            public T WaitForEvent(int timeout = 20000) {
+            public T WaitForEvent(int timeout = 200000) {
                 if (Events.TryTake(out var result, timeout)) {
                     return result;
                 }

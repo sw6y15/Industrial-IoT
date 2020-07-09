@@ -363,8 +363,13 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             }
         }
 
-        [Fact]
-        public async Task WriterGroupSetupPublishingBatchTestAsync() {
+        [Theory]
+        [InlineData(5, 0)]
+        [InlineData(5, 5)]
+        [InlineData(5, 100)]
+        [InlineData(100, 5)]
+        [InlineData(1000, 5)]
+        public async Task WriterGroupSetupPublishingBatchTestAsync(int batchSize, int intervalInSec) {
 
             using (var mock = Setup()) {
 
@@ -375,8 +380,10 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                 // Act
                 var result1 = await groups.AddWriterGroupAsync(new WriterGroupAddRequestModel {
                     Name = "TestGroup",
-                    BatchSize = 100,
-                    PublishingInterval = TimeSpan.FromSeconds(5),
+                    BatchSize = batchSize,
+                    // This is the key - after 5 seconds it should click
+                    PublishingInterval = intervalInSec == 0 ?
+                        (TimeSpan?)null : TimeSpan.FromSeconds(intervalInSec),
                     SiteId = "fakesite" // See below
                 });
 
@@ -422,20 +429,21 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                 var value = message.Decode();
                 Assert.False(value.IsNull());
                 Assert.True(value.IsArray);
+                Assert.True(value.Count > 0);
 
                 message = events.GetMessages(result1.WriterGroupId).WaitForEvent();
                 Assert.NotNull(message);
                 value = message.Decode();
                 Assert.False(value.IsNull());
                 Assert.True(value.IsArray);
-                Assert.True(value.Count > 1);
+                Assert.True(value.Count > 0);
 
                 message = events.GetMessages(result1.WriterGroupId).WaitForEvent();
                 Assert.NotNull(message);
                 value = message.Decode();
                 Assert.False(value.IsNull());
                 Assert.True(value.IsArray);
-                Assert.True(value.Count > 1);
+                Assert.True(value.Count > 3);
 
                 // Deactivate - stop engine
                 await groups.DeactivateWriterGroupAsync(result1.WriterGroupId);

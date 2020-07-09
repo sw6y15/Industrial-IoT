@@ -74,8 +74,10 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             get => _publishingInterval;
             set {
                 if (_publishingInterval != value) {
-                    _engine?.SetBatchTriggerInterval(value);
                     _publishingInterval = value;
+                    if (_engine != null) {
+                        _engine?.SetPublishingInterval(value);
+                    }
                 }
             }
         }
@@ -85,7 +87,14 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             get => _batchSize ?? 1;
             set {
                 if (!value.HasValue || value.Value > 0) {
-                    _batchSize = value;
+                    var prev = _batchSize ?? 1;
+                    var now = value ?? 1;
+                    if (prev != now) {
+                        _batchSize = value;
+                        var cur = _engine;
+                        _engine = new MessageFlowEngine(this);
+                        cur?.Dispose();
+                    }
                 }
             }
         }
@@ -170,7 +179,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                 _encoders.Add(MessageSchemaTypes.NetworkMessageUadp, new UadpNetworkMessageEncoder());
             }
 
-            _engine = new DataFlowEngine(this);
             _writers = new ConcurrentDictionary<string, DataSetWriterSubscription>();
             _diagnosticsOutputTimer = new Timer(DiagnosticsOutputTimer_Elapsed);
         }
@@ -225,7 +233,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         public void Dispose() {
             try {
                 // Stop
-                _engine.Dispose();
+                var cur = _engine;
+                cur?.Dispose();
                 RemoveAllWriters();
             }
             catch {
@@ -238,9 +247,82 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         }
 
         /// <summary>
+        /// Handle subscription notification messages
+        /// </summary>
+        /// <param name="dataSetWriter"></param>
+        /// <param name="sequenceNumber"></param>
+        /// <param name="notification"></param>
+        private void OnSubscriptionNotification(DataSetWriterModel dataSetWriter,
+            uint sequenceNumber, SubscriptionNotificationModel notification) {
+            try {
+                var notifications = notification.Notifications.ToList();
+                var message = new DataSetWriterMessageModel {
+                    // TODO: Filter changes on the monitored items contained in the template
+                    Notifications = notifications,
+                    ServiceMessageContext = notification.ServiceMessageContext,
+                    SubscriptionId = notification.SubscriptionId,
+                    SequenceNumber = sequenceNumber,
+                    ContentMask = (uint?)NetworkMessageContentMask,
+                    PublisherId = PublisherId,
+                    ApplicationUri = notification.ApplicationUri,
+                    EndpointUrl = notification.EndpointUrl,
+                    TimeStamp = notification.Timestamp,
+                    Writer = dataSetWriter
+                };
+                Interlocked.Add(ref _valueChangesCount, notifications.Count);
+                Interlocked.Increment(ref _dataChangesCount);
+
+                if (_engine == null) {
+                    _engine = new MessageFlowEngine(this);
+                }
+                _engine.Enqueue(message);
+            }
+            catch (Exception ex) {
+                _logger.Debug(ex, "Failed to produce message");
+            }
+        }
+
+        /// <summary>
+        /// Encode dataset messages using the configured encoder
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        private IEnumerable<NetworkMessageModel> PackNetworkMessages(
+            IEnumerable<DataSetWriterMessageModel> input) {
+            var encoder = _encoder;
+            if (encoder == null) {
+                encoder = _encoders.First().Value; // Select first encoder
+            }
+            if (BatchSize.Value == 1) {
+                return encoder.Encode(input, (int)MaxNetworkMessageSize.Value);
+            }
+            return encoder.EncodeBatch(input, (int)MaxNetworkMessageSize.Value);
+        }
+
+        /// <summary>
+        /// Send message
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        private async Task EmitNetworkMessageAsync(NetworkMessageModel message) {
+            try {
+                using (kSendingDuration.NewTimer()) {
+                    await _events.SendEventAsync(message.Body,
+                        message.ContentType, message.MessageSchema, message.ContentEncoding);
+                }
+                Interlocked.Increment(ref _sentCompleteCount);
+                kMessagesSent.WithLabels(_iotHubMessageSinkGuid, _iotHubMessageSinkStartTime).Inc();
+            }
+            catch (Exception ex) {
+                _logger.Error(ex, "Error while sending messages to IoT Hub.");
+                // we do not set the block into a faulted state.
+            }
+        }
+
+        /// <summary>
         /// Message flow engine
         /// </summary>
-        private sealed class DataFlowEngine {
+        private sealed class MessageFlowEngine {
 
             /// <summary>
             /// Input messages
@@ -260,27 +342,26 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             /// <summary>
             /// Sent pending
             /// </summary>
-            public int SentPendingCount => _sinkBlock.InputCount;
-
-            /// <summary>
-            /// Sent messages
-            /// </summary>
-            public long SentCompleteCount => _sentCompleteCount;
+            public int ReadyToSendCount => _sinkBlock.InputCount;
 
             /// <summary>
             /// Create engine
             /// </summary>
             /// <param name="outer"></param>
-            internal DataFlowEngine(WriterGroupProcessingEngine outer) {
+            internal MessageFlowEngine(WriterGroupProcessingEngine outer) {
                 _outer = outer ?? throw new ArgumentNullException(nameof(outer));
+
                 _logger = _outer._logger?.ForContext<WriterGroupProcessingEngine>() ??
                     throw new ArgumentNullException(nameof(_logger));
-                _batchTriggerIntervalTimer = new Timer(BatchTriggerIntervalTimer_Elapsed);
+                _publishingInterval = outer.PublishingInterval ?? TimeSpan.Zero;
+                var batchSize = _outer.BatchSize.Value;
+
                 _cts = new CancellationTokenSource();
 
                 // Input
                 _inputBlock = new BatchBlock<DataSetWriterMessageModel>(
-                    _outer.BatchSize.Value, new GroupingDataflowBlockOptions {
+                    batchSize,
+                    new GroupingDataflowBlockOptions {
                         CancellationToken = _cts.Token,
                         EnsureOrdered = true
                     });
@@ -289,6 +370,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                 _encodingBlock = new TransformManyBlock<DataSetWriterMessageModel[], NetworkMessageModel>(
                     EncodeAsync,
                     new ExecutionDataflowBlockOptions {
+                        BoundedCapacity = batchSize * 5, // TODO: Should be configurable
                         SingleProducerConstrained = true,
                         EnsureOrdered = true,
                         CancellationToken = _cts.Token
@@ -298,6 +380,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                 _sinkBlock = new ActionBlock<NetworkMessageModel>(
                     SendAsync,
                     new ExecutionDataflowBlockOptions {
+                        BoundedCapacity = 10,
                         MaxDegreeOfParallelism = 1,
                         EnsureOrdered = true,
                         CancellationToken = _cts.Token
@@ -310,14 +393,24 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                 _encodingBlock.LinkTo(_sinkBlock, new DataflowLinkOptions {
                     PropagateCompletion = true
                 });
+
+                _publishingIntervalTimer = new Timer(OnPublishingIntervalTimerExpired);
             }
 
             /// <inheritdoc/>
-            public void SetBatchTriggerInterval(TimeSpan? value) {
-                _batchTriggerInterval = value;
-                if (_batchTriggerInterval == null || _batchTriggerInterval.Value == TimeSpan.Zero) {
-                    _batchTriggerIntervalTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            public void SetPublishingInterval(TimeSpan? value) {
+                var newInterval = value ?? TimeSpan.Zero;
+                if (newInterval == TimeSpan.Zero) {
+                    // Turn off publishing trigger
+                    _publishingIntervalTimer.Change(Timeout.Infinite, Timeout.Infinite);
+                    _armed = false;
                 }
+                else if (_publishingInterval > newInterval || !_armed) {
+                    // Update current timer or start it
+                    _armed = true;
+                    _publishingIntervalTimer.Change(newInterval, Timeout.InfiniteTimeSpan);
+                }
+                _publishingInterval = newInterval;
             }
 
             /// <summary>
@@ -325,7 +418,20 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             /// </summary>
             /// <param name="message"></param>
             public void Enqueue(DataSetWriterMessageModel message) {
-                _inputBlock.Post(message);
+                while (!_cts.IsCancellationRequested) {
+                    if (_inputBlock.Post(message)) {
+                        ArmPublishingTimer();
+                        break;  // Once encoded
+                    }
+                    //
+                    // Perform back pressure
+                    //
+                    // This is not what we really want - we want to apply
+                    // back pressure at the message level, but for that
+                    // we will need an ack on the message.
+                    //
+                    Thread.Sleep(100);
+                }
             }
 
             /// <inheritdoc/>
@@ -339,17 +445,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                     // Nothing...
                 }
                 finally {
-                    _batchTriggerIntervalTimer.Dispose();
+                    _publishingIntervalTimer.Dispose();
                     _cts.Dispose();
                 }
-            }
-
-            /// <summary>
-            /// Batch trigger interval
-            /// </summary>
-            /// <param name="state"></param>
-            private void BatchTriggerIntervalTimer_Elapsed(object state) {
-                _inputBlock.TriggerBatch();
             }
 
             /// <summary>
@@ -357,55 +455,55 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             /// </summary>
             /// <param name="messages"></param>
             /// <returns></returns>
-            private IEnumerable<NetworkMessageModel> EncodeAsync(DataSetWriterMessageModel[] messages) {
-                if (_batchTriggerInterval != null && _batchTriggerInterval.Value > TimeSpan.Zero) {
-                    _batchTriggerIntervalTimer.Change(_batchTriggerInterval.Value, Timeout.InfiniteTimeSpan);
-                }
-                return _outer.EncodeMessages(messages);
+            private IEnumerable<NetworkMessageModel> EncodeAsync(
+                DataSetWriterMessageModel[] messages) {
+                return _outer.PackNetworkMessages(messages);
             }
 
             /// <summary>
-            /// Send messages
+            /// Send message
             /// </summary>
             /// <param name="message"></param>
             /// <returns></returns>
             private async Task SendAsync(NetworkMessageModel message) {
-                if (message == null) {
-                    return;
+                if (message != null) {
+                    await _outer.EmitNetworkMessageAsync(message);
+                    // message published re-arm publishing timer
+                    ArmPublishingTimer();
                 }
-                try {
-                    using (kSendingDuration.NewTimer()) {
-                        await _outer._events.SendEventAsync(message.Body,
-                            message.ContentType, message.MessageSchema, message.ContentEncoding);
-                    }
-                    Interlocked.Increment(ref _sentCompleteCount);
-                    kMessagesSent.WithLabels(_iotHubMessageSinkGuid, _iotHubMessageSinkStartTime).Inc();
+            }
+
+            /// <summary>
+            /// Re-arm the publishing timeout timer if not already armed
+            /// </summary>
+            private void ArmPublishingTimer() {
+                if (!_armed && _publishingInterval > TimeSpan.Zero) {
+                    // Start timer
+                    _armed = true;
+                    _publishingIntervalTimer.Change(
+                        _publishingInterval, Timeout.InfiniteTimeSpan);
+                    // Now timer is armed - will trigger batch once expired.
                 }
-                catch (Exception ex) {
-                    _logger.Error(ex, "Error while sending messages to IoT Hub.");
-                    // we do not set the block into a faulted state.
-                }
+            }
+
+            /// <summary>
+            /// Trigger publishing of batched block messages
+            /// </summary>
+            /// <param name="state"></param>
+            private void OnPublishingIntervalTimerExpired(object state) {
+                _inputBlock.TriggerBatch();
+                _armed = false; // once sent we now re-arm the interval timer
             }
 
             private readonly WriterGroupProcessingEngine _outer;
             private readonly ILogger _logger;
-            private readonly Timer _batchTriggerIntervalTimer;
             private readonly BatchBlock<DataSetWriterMessageModel> _inputBlock;
             private readonly CancellationTokenSource _cts;
             private readonly TransformManyBlock<DataSetWriterMessageModel[], NetworkMessageModel> _encodingBlock;
             private readonly ActionBlock<NetworkMessageModel> _sinkBlock;
-            private readonly string _iotHubMessageSinkGuid = Guid.NewGuid().ToString();
-            private long _sentCompleteCount;
-            private TimeSpan? _batchTriggerInterval;
-            private readonly string _iotHubMessageSinkStartTime =
-                DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss.FFFFFFFK", CultureInfo.InvariantCulture);
-            private static readonly Histogram kSendingDuration = Metrics.CreateHistogram(
-                "iiot_edge_publisher_messages_duration", "Histogram of message sending durations");
-            private static readonly Gauge kMessagesSent = Metrics.CreateGauge(
-                "iiot_edge_publisher_messages", "Number of messages sent to IotHub",
-                    new GaugeConfiguration {
-                        LabelNames = new[] { "runid", "timestamp_utc" }
-                    });
+            private readonly Timer _publishingIntervalTimer;
+            private bool _armed;
+            private TimeSpan _publishingInterval;
         }
 
         /// <summary>
@@ -551,7 +649,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                     var sequenceNumber = (uint)Interlocked.Increment(ref _currentSequenceNumber);
                     var snapshot = await Subscription.GetSnapshotAsync();
                     if (snapshot != null) {
-                        _outer.ProcessDataSetWriterNotification(_dataSetWriter, sequenceNumber, snapshot);
+                        _outer.OnSubscriptionNotification(_dataSetWriter, sequenceNumber, snapshot);
                     }
                 }
                 catch (Exception ex) {
@@ -626,7 +724,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                             e = snapshot;
                         }
                     }
-                    _outer.ProcessDataSetWriterNotification(_dataSetWriter, sequenceNumber, e);
+                    _outer.OnSubscriptionNotification(_dataSetWriter, sequenceNumber, e);
                 }
                 catch (Exception ex) {
                     _logger.Error(ex, "Failed to process writer notification");
@@ -644,55 +742,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             private readonly ILogger _logger;
         }
 
-        /// <summary>
-        /// handle subscription change messages
-        /// </summary>
-        /// <param name="dataSetWriter"></param>
-        /// <param name="sequenceNumber"></param>
-        /// <param name="notification"></param>
-        private void ProcessDataSetWriterNotification(DataSetWriterModel dataSetWriter,
-            uint sequenceNumber, SubscriptionNotificationModel notification) {
-            try {
-                var notifications = notification.Notifications.ToList();
-                var message = new DataSetWriterMessageModel {
-                    // TODO: Filter changes on the monitored items contained in the template
-                    Notifications = notifications,
-                    ServiceMessageContext = notification.ServiceMessageContext,
-                    SubscriptionId = notification.SubscriptionId,
-                    SequenceNumber = sequenceNumber,
-                    ContentMask = (uint?)NetworkMessageContentMask,
-                    PublisherId = PublisherId,
-                    ApplicationUri = notification.ApplicationUri,
-                    EndpointUrl = notification.EndpointUrl,
-                    TimeStamp = notification.Timestamp,
-                    Writer = dataSetWriter
-                };
-                Interlocked.Add(ref _valueChangesCount, notifications.Count);
-                Interlocked.Increment(ref _dataChangesCount);
-                _engine.Enqueue(message);
-            }
-            catch (Exception ex) {
-                _logger.Debug(ex, "Failed to produce message");
-            }
-        }
-
-        /// <summary>
-        /// Encode dataset messages using the configured encoder
-        /// </summary>
-        /// <param name="input"></param>
-        /// <returns></returns>
-        private IEnumerable<NetworkMessageModel> EncodeMessages(
-            IEnumerable<DataSetWriterMessageModel> input) {
-            var encoder = _encoder;
-            if (encoder == null) {
-                encoder = _encoders.First().Value; // Select first encoder
-            }
-            if (BatchSize.Value == 1) {
-                return encoder.Encode(input, (int)MaxNetworkMessageSize.Value);
-            }
-            return encoder.EncodeBatch(input, (int)MaxNetworkMessageSize.Value);
-        }
-
         // Services
         private readonly Dictionary<string, INetworkMessageEncoder> _encoders;
         private readonly ISubscriptionManager _subscriptions;
@@ -708,7 +757,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         private int? _batchSize;
         private TimeSpan? _publishingInterval;
         private string _writerGroupId;
-        private readonly DataFlowEngine _engine;
+        private MessageFlowEngine _engine;
 
         /// <summary>
         /// Diagnostics timer
@@ -755,8 +804,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                 _dataChangesCount / totalDuration : 0;
             var valueChangesAverage = _valueChangesCount > 0 && totalDuration > 0 ?
                 _valueChangesCount / totalDuration : 0;
-            var sentMessagesAverage = _engine.SentCompleteCount > 0 && totalDuration > 0 ?
-                _engine.SentCompleteCount / totalDuration : 0;
+            var sentMessagesAverage = _sentCompleteCount > 0 && totalDuration > 0 ?
+                _sentCompleteCount / totalDuration : 0;
 
             _logger.Information(diagInfo.ToString(),
                 PublisherId, writerGroupId,
@@ -770,8 +819,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                 messagesProcessedCount,
                 avgNotificationsPerMessage,
                 avgMessageSize,
-                _engine?.SentPendingCount,
-                _engine.SentCompleteCount, sentMessagesAverage,
+                _engine?.ReadyToSendCount,
+                _sentCompleteCount, sentMessagesAverage,
                 numberOfConnectionRetries);
 
             kDataChangesCount.WithLabels(PublisherId, writerGroupId)
@@ -793,9 +842,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             kMesageSizeAvg.WithLabels(PublisherId, writerGroupId)
                 .Set(avgMessageSize);
             kIoTHubQueueBuffer.WithLabels(PublisherId, writerGroupId)
-                .Set((long)_engine?.SentPendingCount);
+                .Set((long)_engine?.ReadyToSendCount);
             kSentMessagesCount.WithLabels(PublisherId, writerGroupId)
-                .Set(_engine.SentCompleteCount);
+                .Set(_sentCompleteCount);
             kNumberOfConnectionRetries.WithLabels(PublisherId, writerGroupId)
                 .Set(numberOfConnectionRetries);
         }
@@ -806,11 +855,19 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         private readonly Timer _diagnosticsOutputTimer;
         private long _valueChangesCount;
         private long _dataChangesCount;
+        private long _sentCompleteCount;
 
         private static readonly GaugeConfiguration kGaugeConfig = new GaugeConfiguration {
             LabelNames = new[] { "publisherid", "triggerid" }
         };
 
+        private readonly string _iotHubMessageSinkGuid = Guid.NewGuid().ToString();
+        private readonly string _iotHubMessageSinkStartTime =
+            DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss.FFFFFFFK", CultureInfo.InvariantCulture);
+        private static readonly Histogram kSendingDuration = Metrics.CreateHistogram(
+            "iiot_edge_publisher_messages_duration", "Histogram of message sending durations");
+        private static readonly Gauge kMessagesSent = Metrics.CreateGauge(
+            "iiot_edge_publisher_messages", "Number of messages sent to IotHub", kGaugeConfig);
         private static readonly Gauge kValueChangesCount = Metrics.CreateGauge(
             "iiot_edge_publisher_value_changes", "Opc ValuesChanges delivered for processing", kGaugeConfig);
         private static readonly Gauge kValueChangesPerSecond = Metrics.CreateGauge(
