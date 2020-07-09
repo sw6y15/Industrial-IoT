@@ -11,6 +11,8 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Registry.Sync.Runtime {
     using Microsoft.Azure.IIoT.Messaging.ServiceBus.Runtime;
     using Microsoft.Azure.IIoT.Hub.Client;
     using Microsoft.Azure.IIoT.Hub.Client.Runtime;
+    using Microsoft.Azure.IIoT.AspNetCore.Diagnostics;
+    using Microsoft.Azure.IIoT.Auth;
     using Microsoft.Azure.IIoT.Diagnostics;
     using Microsoft.Extensions.Configuration;
     using System;
@@ -19,7 +21,7 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Registry.Sync.Runtime {
     /// Registry sync configuration
     /// </summary>
     public class Config : DiagnosticsConfig, IIoTHubConfig, IServiceBusConfig,
-        IActivationSyncConfig, IServiceEndpoint, IOrchestrationConfig,
+        IActivationSyncConfig, IServiceEndpoint, IOrchestrationConfig, IMetricServerConfig,
         ISettingsSyncConfig {
 
         /// <inheritdoc/>
@@ -41,6 +43,8 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Registry.Sync.Runtime {
             remove => _ep.OnServiceEndpointUpdated -= value;
         }
 
+        /// <inheritdoc/>
+        public int Port => 9505;
 
         /// <summary>
         /// Configuration constructor

@@ -3,7 +3,7 @@
 //  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace Microsoft.Azure.IIoT.OpcUa.Edge.Tests {
+namespace Microsoft.Azure.IIoT.OpcUa.Edge.Twin {
     using Microsoft.Azure.IIoT.OpcUa.Testing.Fixtures;
     using Xunit;
 

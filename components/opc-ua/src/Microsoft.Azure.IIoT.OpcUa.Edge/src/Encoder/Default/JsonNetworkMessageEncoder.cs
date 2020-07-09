@@ -105,12 +105,12 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                         Body = Encoding.UTF8.GetBytes(writer.ToString()),
                         ContentEncoding = "utf-8",
                         Timestamp = DateTime.UtcNow,
-                        ContentType = ContentMimeType.UaJson,
+                        ContentType = ContentMimeType.Json,
                         MessageSchema = MessageSchemaTypes.NetworkMessageJson
                     };
-                    AvgMessageSize = (AvgMessageSize * MessagesProcessedCount + encoded.Body.Length) /
+                    AvgMessageSize = ((AvgMessageSize * MessagesProcessedCount) + encoded.Body.Length) /
                         (MessagesProcessedCount + 1);
-                    AvgNotificationsPerMessage = (AvgNotificationsPerMessage * MessagesProcessedCount +
+                    AvgNotificationsPerMessage = ((AvgNotificationsPerMessage * MessagesProcessedCount) +
                         chunk.Count) / (MessagesProcessedCount + 1);
                         MessagesProcessedCount++;
                     chunk.Clear();
@@ -154,9 +154,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                     yield break;
                 }
                 NotificationsProcessedCount++;
-                AvgMessageSize = (AvgMessageSize * MessagesProcessedCount + encoded.Body.Length) /
+                AvgMessageSize = ((AvgMessageSize * MessagesProcessedCount) + encoded.Body.Length) /
                     (MessagesProcessedCount + 1);
-                AvgNotificationsPerMessage = (AvgNotificationsPerMessage * MessagesProcessedCount + 1) /
+                AvgNotificationsPerMessage = ((AvgNotificationsPerMessage * MessagesProcessedCount) + 1) /
                     (MessagesProcessedCount + 1);
                 MessagesProcessedCount++;
                 yield return encoded;

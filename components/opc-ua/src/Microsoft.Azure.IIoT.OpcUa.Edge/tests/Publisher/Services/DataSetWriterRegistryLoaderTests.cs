@@ -3,7 +3,7 @@
 //  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services.Tests {
+namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
     using Microsoft.Azure.IIoT.OpcUa.Publisher.Models;
     using Microsoft.Azure.IIoT.OpcUa.Publisher.Clients;
     using Microsoft.Azure.IIoT.Serializers;

@@ -19,6 +19,7 @@ namespace Microsoft.Azure.IIoT.Services.Processor.Events {
     using Microsoft.Azure.IIoT.Hub.Client;
     using Microsoft.Azure.IIoT.Http.Default;
     using Microsoft.Azure.IIoT.Http.Ssl;
+    using Microsoft.Azure.IIoT.AspNetCore.Diagnostics.Default;
     using Microsoft.Azure.IIoT.Auth.Clients;
     using Microsoft.Azure.IIoT.Serializers;
     using Microsoft.Extensions.Configuration;
@@ -114,6 +115,10 @@ namespace Microsoft.Azure.IIoT.Services.Processor.Events {
                 .AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<EventProcessorFactory>()
                 .AsImplementedInterfaces();
+
+            // Prometheus metric server
+            builder.RegisterType<MetricServerHost>()
+                .AsImplementedInterfaces().SingleInstance();
 
             // Handle iot hub telemetry events...
             builder.RegisterType<IoTHubServiceHttpClient>()

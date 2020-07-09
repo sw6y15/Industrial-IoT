@@ -191,6 +191,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
                         ResolveDisplayNames(session);
                         Active = await SetMonitoredItemsAsync(rawSubscription, _subscription.MonitoredItems, Active)
                             .ConfigureAwait(false) && Active;
+
                         OnSubscriptionStatusChange(this, new SubscriptionStatusModel {
                             SubscriptionId = _subscription.Id
                         });
@@ -270,8 +271,12 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
                     if (rawSubscription == null) {
                         return false;
                     }
-                    return await SetMonitoredItemsAsync(rawSubscription, _subscription.MonitoredItems, activate)
+                    var result = await SetMonitoredItemsAsync(rawSubscription, _subscription.MonitoredItems, activate)
                         .ConfigureAwait(false) && activate;
+                    OnSubscriptionStatusChange(this, new SubscriptionStatusModel {
+                        SubscriptionId = _subscription.Id
+                    });
+                    return result;
                 }
                 catch (ServiceResultException sre) {
                     _logger.Error("Failed to reapply monitored items due to {exception}", sre.Message);
@@ -1126,7 +1131,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
                 return new MonitoredItemStatusModel {
                     Id = Template.Id,
                     ClientHandle = Item?.Status?.ClientHandle,
-                    Error = !ServerId.HasValue || ServerId.Value == 0u || Item?.Status?.Error == null ? null :
+                    IsEvent = Item?.NodeClass != null && Item.NodeClass != Opc.Ua.NodeClass.Variable,
+                    Error = Item?.Status?.Error == null ? null :
                         encoder.Encode(Item.Status?.Error?.StatusCode, null, config),
                     ServerId = ServerId == 0u ? null : ServerId
                 };

@@ -619,13 +619,13 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                     service.UpdateDataSetVariableAsync(writer.DataSetWriterId, found.Last().Id,
                     new DataSetUpdateVariableRequestModel {
                         GenerationId = "badgenerationid",
-                        MonitoringMode = Models.MonitoringMode.Reporting
+                        MonitoringMode = MonitoringMode.Reporting
                     }));
                 await service.UpdateDataSetVariableAsync(writer.DataSetWriterId, found.Last().Id,
                     new DataSetUpdateVariableRequestModel {
                         GenerationId = found.Last().GenerationId,
-                        MonitoringMode = Models.MonitoringMode.Reporting,
-                        DeadbandType = Models.DeadbandType.Percent,
+                        MonitoringMode = MonitoringMode.Reporting,
+                        DeadbandType = DeadbandType.Percent,
                         DeadbandValue = 0.5,
                         DataChangeFilter = DataChangeTriggerType.StatusValue,
                         DiscardNew = true,
@@ -654,8 +654,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                 Assert.NotNull(found);
                 Assert.Single(found);
                 Assert.Equal(0.5, found.Single().DeadbandValue);
-                Assert.Equal(Models.MonitoringMode.Reporting, found.Single().MonitoringMode);
-                Assert.Equal(Models.DeadbandType.Percent, found.Single().DeadbandType);
+                Assert.Equal(MonitoringMode.Reporting, found.Single().MonitoringMode);
+                Assert.Equal(DeadbandType.Percent, found.Single().DeadbandType);
                 Assert.Equal(DataChangeTriggerType.StatusValue, found.Single().DataChangeFilter);
                 Assert.Equal(true, found.Single().DiscardNew);
                 Assert.Equal(TimeSpan.FromSeconds(2), found.Single().HeartbeatInterval);
@@ -668,8 +668,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                 await service.UpdateDataSetVariableAsync(writer.DataSetWriterId, found.Last().Id,
                     new DataSetUpdateVariableRequestModel {
                         GenerationId = found.Last().GenerationId,
-                        MonitoringMode = Models.MonitoringMode.Disabled,
-                        DeadbandType = Models.DeadbandType.Absolute,
+                        MonitoringMode = MonitoringMode.Disabled,
+                        DeadbandType = DeadbandType.Absolute,
                         DeadbandValue = 0.0,
                         DataChangeFilter = DataChangeTriggerType.Status,
                         DiscardNew = false,
@@ -770,7 +770,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                             "a", "a", "a"
                         },
                         MessageSettings = new WriterGroupMessageSettingsModel {
-                            DataSetOrdering = Models.DataSetOrderingType.AscendingWriterIdSingle,
+                            DataSetOrdering = DataSetOrderingType.AscendingWriterIdSingle,
                             GroupVersion = 34,
                             NetworkMessageContentMask =
                                 NetworkMessageContentMask.NetworkMessageHeader |
@@ -793,7 +793,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                 Assert.Equal(TimeSpan.FromSeconds(56), group.KeepAliveTime);
                 Assert.All(group.LocaleIds, b => Assert.Equal("a", b));
                 Assert.NotNull(group.MessageSettings);
-                Assert.Equal(Models.DataSetOrderingType.AscendingWriterIdSingle, group.MessageSettings.DataSetOrdering);
+                Assert.Equal(DataSetOrderingType.AscendingWriterIdSingle, group.MessageSettings.DataSetOrdering);
                 Assert.Equal(34u, group.MessageSettings.GroupVersion);
                 Assert.Equal(NetworkMessageContentMask.NetworkMessageHeader | NetworkMessageContentMask.DataSetClassId,
                     group.MessageSettings.NetworkMessageContentMask);
@@ -827,8 +827,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                         KeyFrameInterval = TimeSpan.FromSeconds(5),
                         WriterGroupId = "noid",
                         DataSetFieldContentMask =
-                            Models.DataSetFieldContentMask.ApplicationUri |
-                            Models.DataSetFieldContentMask.DisplayName,
+                            DataSetFieldContentMask.ApplicationUri |
+                            DataSetFieldContentMask.DisplayName,
                         DataSetName = "supername",
                         ExtensionFields = new Dictionary<string, string> {
                             ["test"] = "total"
@@ -858,8 +858,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
 
                 var writer = await service.GetDataSetWriterAsync(result2.DataSetWriterId);
                 Assert.Equal(TimeSpan.FromSeconds(5), writer.KeyFrameInterval);
-                Assert.Equal(Models.DataSetFieldContentMask.ApplicationUri |
-                    Models.DataSetFieldContentMask.DisplayName, writer.DataSetFieldContentMask);
+                Assert.Equal(DataSetFieldContentMask.ApplicationUri |
+                    DataSetFieldContentMask.DisplayName, writer.DataSetFieldContentMask);
                 Assert.Equal(566u, writer.KeyFrameCount);
                 Assert.NotNull(writer.DataSet);
                 Assert.Equal("supername", writer.DataSet.Name);

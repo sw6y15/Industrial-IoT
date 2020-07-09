@@ -40,7 +40,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
             _logger = logger;
             _identity = identity;
             _applicationConfiguration = _clientConfig.
-                ToApplicationConfigurationAsync(_identity, true, OnValidate).Result;
+                ToApplicationConfigurationAsync(_identity, OnValidate).Result;
             _endpointConfiguration = _clientConfig.ToEndpointConfiguration();
 
             _lock = new SemaphoreSlim(1, 1);
@@ -77,7 +77,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
                     if (!createIfNotExists) {
                         return null;
                     }
-                    wrapper = new SessionWrapper() {
+                    wrapper = new SessionWrapper {
                         Id = id.ToString(),
                         MissedKeepAlives = 0,
                         MaxKeepAlives = (int)_clientConfig.MaxKeepAliveCount,
@@ -135,7 +135,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
             _lock.Wait();
             try {
                 if (!_sessions.TryGetValue(id, out var wrapper)) {
-                    wrapper = new SessionWrapper() {
+                    wrapper = new SessionWrapper {
                         Id = id.ToString(),
                         MissedKeepAlives = 0,
                         MaxKeepAlives = (int)_clientConfig.MaxKeepAliveCount,
@@ -406,7 +406,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
         /// <param name="ct"></param>
         /// <returns></returns>
         private async Task HandleInitAsync(ConnectionIdentifier id,
-        SessionWrapper wrapper, CancellationToken ct) {
+            SessionWrapper wrapper, CancellationToken ct) {
             try {
                 if (wrapper.Session != null) {
                     _logger.Warning("Session '{id}' still attached to wrapper in {state}",
@@ -554,7 +554,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
 
                 // Validate thumbprint
                 if (e.Certificate.RawData != null && !string.IsNullOrWhiteSpace(e.Certificate.Thumbprint)) {
-                    
+
                     if (_sessions.Keys.Any(id => id?.Connection?.Endpoint?.Certificate != null &&
                         e.Certificate.Thumbprint == id.Connection.Endpoint.Certificate)) {
                         e.Accept = true;

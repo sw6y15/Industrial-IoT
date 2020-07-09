@@ -3,9 +3,7 @@
 //  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace Microsoft.Azure.IIoT.OpcUa.Edge.Twin {
-    using Microsoft.Azure.IIoT.OpcUa.Edge.Twin.Services;
-    using Microsoft.Azure.IIoT.OpcUa.Edge.Tests;
+namespace Microsoft.Azure.IIoT.OpcUa.Edge.Twin.Services {
     using Microsoft.Azure.IIoT.OpcUa.Core.Models;
     using Microsoft.Azure.IIoT.OpcUa.History.Clients;
     using Microsoft.Azure.IIoT.OpcUa.Protocol.Services;
@@ -21,9 +19,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Twin {
 
 
     [Collection(HistoryReadCollection.Name)]
-    public class AddressSpaceReadValuesTests {
+    public class AddressSpaceHistoryReadTests {
 
-        public AddressSpaceReadValuesTests(HistoryServerFixture server) {
+        public AddressSpaceHistoryReadTests(HistoryServerFixture server) {
             _server = server;
             _hostEntry = Try.Op(() => Dns.GetHostEntry(Utils.GetHostName()))
                 ?? Try.Op(() => Dns.GetHostEntry("localhost"));

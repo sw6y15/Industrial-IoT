@@ -37,9 +37,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
                     nameof(dataSetWriter.DataSet.DataSetSource.Connection));
             }
             var monitoredItems = dataSetWriter.DataSet.DataSetSource.ToMonitoredItems();
-            if (monitoredItems.Count == 0) {
-                throw new ArgumentException(nameof(dataSetWriter.DataSet.DataSetSource));
-            }
             return new SubscriptionModel {
                 Connection = dataSetWriter.DataSet.DataSetSource.Connection.Clone(),
                 Id = dataSetWriter.DataSetWriterId,

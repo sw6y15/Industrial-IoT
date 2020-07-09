@@ -10,6 +10,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
     using Microsoft.Azure.IIoT.OpcUa.Protocol.Models;
     using Microsoft.Azure.IIoT.OpcUa.Core;
     using Microsoft.Azure.IIoT.Module;
+    using Microsoft.Azure.IIoT.Messaging;
     using Microsoft.Azure.IIoT.Utils;
     using Serilog;
     using Prometheus;
@@ -34,8 +35,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         /// </summary>
         internal string PublisherId {
             get {
-                var moduleId = _events.ModuleId;
-                var deviceId = _events.DeviceId;
+                var moduleId = _identity.ModuleId;
+                var deviceId = _identity.DeviceId;
                 if (string.IsNullOrEmpty(moduleId)) {
                     if (string.IsNullOrEmpty(deviceId)) {
                         return null;
@@ -149,14 +150,16 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         /// </summary>
         /// <param name="encoders"></param>
         /// <param name="state"></param>
+        /// <param name="identity"></param>
         /// <param name="events"></param>
         /// <param name="subscriptions"></param>
         /// <param name="logger"></param>
-        public WriterGroupProcessingEngine(IEventEmitter events, ISubscriptionManager subscriptions,
+        public WriterGroupProcessingEngine(IEventClient events, ISubscriptionManager subscriptions,
             IEnumerable<INetworkMessageEncoder> encoders, IWriterGroupStateReporter state,
-            ILogger logger) {
+            IIdentity identity, ILogger logger) {
             _state = state ?? throw new ArgumentNullException(nameof(state));
             _events = events ?? throw new ArgumentNullException(nameof(events));
+            _identity = identity ?? throw new ArgumentNullException(nameof(identity));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _subscriptions = subscriptions ?? throw new ArgumentNullException(nameof(subscriptions));
             _encoders = encoders?.ToDictionary(e => e.MessageScheme, e => e) ??
@@ -597,12 +600,10 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
 
                     // ...
                 };
-
-                var item = _subscriptionInfo.MonitoredItems.FirstOrDefault(m => m.Id == e.Id);
-                if (item.EventFilter == null) {
+                if (!e.IsEvent) {
                     // Report as variable state change
                     _outer._state.OnDataSetVariableStateChange(_dataSetWriter.DataSetWriterId,
-                        item.Id, state);
+                        e.Id, state);
                 }
                 else {
                     // Report as event state
@@ -696,7 +697,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         private readonly Dictionary<string, INetworkMessageEncoder> _encoders;
         private readonly ISubscriptionManager _subscriptions;
         private readonly IWriterGroupStateReporter _state;
-        private readonly IEventEmitter _events;
+        private readonly IEventClient _events;
+        private readonly IIdentity _identity;
         private readonly ILogger _logger;
 
         // State

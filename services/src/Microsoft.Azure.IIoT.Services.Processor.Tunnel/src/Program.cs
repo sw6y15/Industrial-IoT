@@ -5,6 +5,7 @@
 
 namespace Microsoft.Azure.IIoT.Services.Processor.Tunnel {
     using Microsoft.Azure.IIoT.Services.Processor.Tunnel.Runtime;
+    using Microsoft.Azure.IIoT.AspNetCore.Diagnostics.Default;
     using Microsoft.Azure.IIoT.Auth.Clients;
     using Microsoft.Azure.IIoT.Http.Default;
     using Microsoft.Azure.IIoT.Http.Ssl;
@@ -106,6 +107,10 @@ namespace Microsoft.Azure.IIoT.Services.Processor.Tunnel {
                 .AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<EventProcessorFactory>()
                 .AsImplementedInterfaces();
+
+            // Prometheus metric server
+            builder.RegisterType<MetricServerHost>()
+                .AsImplementedInterfaces().SingleInstance();
 
             // Handle tunnel server events
             builder.RegisterType<IoTHubDeviceEventHandler>()

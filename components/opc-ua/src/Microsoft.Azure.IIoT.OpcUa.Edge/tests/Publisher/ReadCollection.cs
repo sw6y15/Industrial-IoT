@@ -3,13 +3,13 @@
 //  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace Microsoft.Azure.IIoT.OpcUa.Edge.Twin {
+namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher {
     using Microsoft.Azure.IIoT.OpcUa.Testing.Fixtures;
     using Xunit;
 
     [CollectionDefinition(Name)]
-    public class WriteCollection : ICollectionFixture<TestServerFixture> {
+    public class PublishCollection : ICollectionFixture<TestServerFixture> {
 
-        public const string Name = "Write";
+        public const string Name = "Publish";
     }
 }

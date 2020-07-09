@@ -36,10 +36,10 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher {
         /// </summary>
         /// <param name="context"></param>
         /// <param name="dataSetWriterId"></param>
-        /// <param name="writer"></param>
+        /// <param name="dataSetWriter"></param>
         /// <returns></returns>
         Task OnDataSetWriterStateChangeAsync(PublisherOperationContextModel context,
-            string dataSetWriterId, DataSetWriterInfoModel writer = null);
+            string dataSetWriterId, DataSetWriterInfoModel dataSetWriter = null);
 
         /// <summary>
         /// Called when writer was deleted which implies all

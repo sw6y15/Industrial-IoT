@@ -15,7 +15,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
     using System.Security.Cryptography;
     using System.Linq;
     using System.Threading.Tasks;
-    using Microsoft.Azure.IIoT.OpcUa.Core;
 
     /// <summary>
     /// Loads published nodes file and configures the engine
@@ -113,6 +112,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
 
                         // Update engine under lock
                         lock (_fileLock) {
+                            _engine.WriterGroupId = group.WriterGroupId;
                             _engine.Priority = group.Priority;
                             _engine.BatchSize = group.BatchSize;
                             _engine.PublishingInterval = group.PublishingInterval;

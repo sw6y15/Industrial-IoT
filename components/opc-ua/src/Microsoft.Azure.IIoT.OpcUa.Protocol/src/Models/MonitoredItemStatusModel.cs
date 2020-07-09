@@ -17,6 +17,11 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Models {
         public string Id { get; set; }
 
         /// <summary>
+        /// Monitored item is Event
+        /// </summary>
+        public bool IsEvent { get; set; }
+
+        /// <summary>
         /// Client handle
         /// </summary>
         public uint? ClientHandle { get; set; }
