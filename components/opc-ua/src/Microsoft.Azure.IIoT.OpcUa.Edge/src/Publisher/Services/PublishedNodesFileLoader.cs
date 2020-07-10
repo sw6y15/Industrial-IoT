@@ -24,16 +24,21 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         /// <summary>
         /// Create published nodes file loader
         /// </summary>
-        /// <param name="engine"></param>
+        /// <param name="collector"></param>
+        /// <param name="diagnostics"></param>
+        /// <param name="emitter"></param>
         /// <param name="serializer"></param>
         /// <param name="legacyCliModel"></param>
         /// <param name="logger"></param>
         /// <param name="cryptoProvider"></param>
-        public PublishedNodesFileLoader(IWriterGroupProcessingEngine engine,
+        public PublishedNodesFileLoader(IWriterGroupDataCollector collector,
+            IWriterGroupMessageEmitter emitter, IWriterGroupDiagnostics diagnostics,
             IJsonSerializer serializer, ILegacyCliModelProvider legacyCliModel,
             ILogger logger, ISecureElement cryptoProvider = null) {
 
-            _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            _collector = collector ?? throw new ArgumentNullException(nameof(collector));
+            _emitter = emitter ?? throw new ArgumentNullException(nameof(emitter));
+            _diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _lastSetOfWriterIds = new HashSet<string>();
 
@@ -60,7 +65,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
 
         /// <inheritdoc/>
         public Task StartAsync() {
-            _engine.DiagnosticsInterval = _diagnosticInterval;
+            _diagnostics.DiagnosticsInterval = _diagnosticInterval;
 
             OnPublishedNodesFileChanged(null, null); // load first time
 
@@ -76,16 +81,16 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             _fileSystemWatcher.Changed -= OnPublishedNodesFileChanged;
 
             // Remove all current writers stopping writing messages
-            _engine.RemoveAllWriters();
+            _collector.RemoveAllWriters();
 
-            _engine.DiagnosticsInterval = null;
+            _diagnostics.DiagnosticsInterval = null;
             return Task.CompletedTask;
         }
 
         /// <inheritdoc/>
         public void Dispose() {
             _fileSystemWatcher.Dispose();
-            Try.Op(_engine.RemoveAllWriters);
+            Try.Op(_collector.RemoveAllWriters);
             // Engine is also stopped
         }
 
@@ -112,32 +117,31 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
 
                         // Update engine under lock
                         lock (_fileLock) {
-                            _engine.WriterGroupId = group.WriterGroupId;
-                            _engine.Priority = group.Priority;
-                            _engine.BatchSize = group.BatchSize;
-                            _engine.PublishingInterval = group.PublishingInterval;
-                            _engine.DataSetOrdering = group.MessageSettings?.DataSetOrdering;
-                            _engine.GroupVersion = group.MessageSettings?.GroupVersion;
-                            _engine.HeaderLayoutUri = group.HeaderLayoutUri;
-                            _engine.KeepAliveTime = group.KeepAliveTime;
-                            _engine.MaxNetworkMessageSize = group.MaxNetworkMessageSize;
-
-                            _engine.MessageSchema = MessageSchemaEx.ToMessageSchemaMimeType(
-                                group.Schema, group.Encoding);
-
-                            _engine.NetworkMessageContentMask =
+                            _emitter.WriterGroupId = group.WriterGroupId;
+                            _emitter.BatchSize = group.BatchSize;
+                            _emitter.PublishingInterval = group.PublishingInterval;
+                            _emitter.DataSetOrdering = group.MessageSettings?.DataSetOrdering;
+                            _emitter.HeaderLayoutUri = group.HeaderLayoutUri;
+                            _emitter.MaxNetworkMessageSize = group.MaxNetworkMessageSize;
+                            _emitter.Schema = group.Schema;
+                            _emitter.Encoding = group.Encoding;
+                            _emitter.MessageContentMask =
                                 group.MessageSettings?.NetworkMessageContentMask;
-                            _engine.PublishingOffset =
+                            _emitter.PublishingOffset =
                                 group.MessageSettings?.PublishingOffset?.ToList();
-                            _engine.SamplingOffset =
+
+                            _collector.Priority = group.Priority;
+                            _collector.KeepAliveTime = group.KeepAliveTime;
+                            _collector.GroupVersion = group.MessageSettings?.GroupVersion;
+                            _collector.SamplingOffset =
                                 group.MessageSettings?.SamplingOffset;
 
                             var dataSetWriterIds = group?.DataSetWriters?
                                 .Select(w => w.DataSetWriterId)
                                 .ToHashSet() ?? new HashSet<string>();
                             _lastSetOfWriterIds.ExceptWith(dataSetWriterIds);
-                            _engine.RemoveWriters(_lastSetOfWriterIds);
-                            _engine.AddWriters(group.DataSetWriters);
+                            _collector.RemoveWriters(_lastSetOfWriterIds);
+                            _collector.AddWriters(group.DataSetWriters);
                             _lastSetOfWriterIds = dataSetWriterIds;
                         }
                     }
@@ -171,8 +175,10 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         }
 
         private readonly FileSystemWatcher _fileSystemWatcher;
-        private readonly IWriterGroupProcessingEngine _engine;
+        private readonly IWriterGroupDataCollector _collector;
+        private readonly IWriterGroupMessageEmitter _emitter;
         private readonly PublishedNodesFile _file;
+        private readonly IWriterGroupDiagnostics _diagnostics;
         private readonly ILogger _logger;
         private readonly object _fileLock = new object();
         private readonly TimeSpan? _diagnosticInterval;

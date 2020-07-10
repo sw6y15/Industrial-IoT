@@ -1998,6 +1998,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Models {
                 return null;
             }
             return new PublishedDataSetSourceStateApiModel {
+                EndpointState = (Core.Models.EndpointConnectivityState?)model.EndpointState,
                 LastResult = model.LastResult.ToApiModel(),
                 LastResultChange = model.LastResultChange
             };
@@ -2013,6 +2014,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Models {
                 return null;
             }
             return new PublishedDataSetSourceStateModel {
+                EndpointState = (OpcUa.Core.Models.EndpointConnectivityState?)model.EndpointState,
                 LastResult = model.LastResult.ToServiceModel(),
                 LastResultChange = model.LastResultChange
             };

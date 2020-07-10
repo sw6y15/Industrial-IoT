@@ -73,9 +73,16 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Models {
 
             // Group Property
 
-            if (update?.MessageSchema != existing?.MessageSchema) {
-                twin.Properties.Desired.Add(nameof(WriterGroupRegistration.MessageSchema),
-                    update?.MessageSchema);
+            if (update?.Schema != existing?.Schema) {
+                twin.Properties.Desired.Add(nameof(WriterGroupRegistration.Schema),
+                    update?.Schema == null ?
+                        null : serializer.FromObject(update.Schema.ToString()));
+            }
+
+            if (update?.Encoding != existing?.Encoding) {
+                twin.Properties.Desired.Add(nameof(WriterGroupRegistration.Encoding),
+                    update?.Encoding == null ?
+                        null : serializer.FromObject(update.Encoding.ToString()));
             }
 
             if (update?.NetworkMessageContentMask != existing?.NetworkMessageContentMask) {
@@ -206,8 +213,10 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Models {
                     properties.GetValueOrDefault<byte>(nameof(WriterGroupRegistration.Priority), null),
                 NetworkMessageContentMask =
                     properties.GetValueOrDefault<NetworkMessageContentMask>(nameof(WriterGroupRegistration.NetworkMessageContentMask), null),
-                MessageSchema =
-                    properties.GetValueOrDefault<string>(nameof(WriterGroupRegistration.MessageSchema), null),
+                Schema =
+                    properties.GetValueOrDefault<MessageSchema>(nameof(WriterGroupRegistration.Schema), null),
+                Encoding =
+                    properties.GetValueOrDefault<MessageEncoding>(nameof(WriterGroupRegistration.Encoding), null),
                 HeaderLayoutUri =
                     properties.GetValueOrDefault<string>(nameof(WriterGroupRegistration.HeaderLayoutUri), null)
             };
@@ -274,7 +283,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Models {
                 KeepAliveTime = model.KeepAliveTime,
                 LocaleIds = model.LocaleIds?.EncodeAsDictionary(),
                 MaxNetworkMessageSize = model.MaxNetworkMessageSize,
-                MessageSchema = MessageSchemaEx.ToMessageSchemaMimeType(model.Schema, model.Encoding),
+                Schema = model.Schema,
+                Encoding = model.Encoding,
                 Priority = model.Priority,
                 NetworkMessageContentMask = model.MessageSettings?.NetworkMessageContentMask,
                 PublishingOffset = model.MessageSettings?.PublishingOffset?.EncodeAsDictionary(),
@@ -299,9 +309,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Models {
                 KeepAliveTime = registration.KeepAliveTime,
                 LocaleIds = registration.LocaleIds.DecodeAsList(),
                 MaxNetworkMessageSize = registration.MaxNetworkMessageSize,
-                Mode = MessageSchemaEx.ParseMessageSchemaMimeType(registration.MessageSchema,
-                    out var encoding),
-                Encoding = encoding,
+                Schema = registration.Schema,
+                Encoding = registration.Encoding,
                 Priority = registration.Priority,
                 SiteId = registration.SiteId,
                 MessageSettings = new WriterGroupMessageSettingsModel {
@@ -340,7 +349,10 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Models {
             if (registration == null) {
                 return other == null;
             }
-            if (other.MessageSchema != registration.MessageSchema) {
+            if (other.Schema != registration.Schema) {
+                return false;
+            }
+            if (other.Encoding != registration.Encoding) {
                 return false;
             }
             if (other.KeepAliveTime != registration.KeepAliveTime) {

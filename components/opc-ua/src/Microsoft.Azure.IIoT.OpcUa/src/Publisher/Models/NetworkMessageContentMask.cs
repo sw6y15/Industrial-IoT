@@ -85,6 +85,20 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
         /// <summary>
         /// Reply to
         /// </summary>
-        ReplyTo = 0x4000
+        ReplyTo = 0x4000,
+
+        /// <summary>
+        /// Default mask
+        /// </summary>
+        Default =
+            PublisherId |
+            WriterGroupId |
+            NetworkMessageNumber |
+            SequenceNumber |
+            PayloadHeader |
+            Timestamp |
+            DataSetClassId |
+            NetworkMessageHeader |
+            DataSetMessageHeader
     }
 }

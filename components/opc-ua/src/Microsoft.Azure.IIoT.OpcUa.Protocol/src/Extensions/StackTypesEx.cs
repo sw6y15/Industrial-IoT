@@ -616,12 +616,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol {
         /// <returns></returns>
         public static uint ToStackType(this NetworkMessageContentMask? mask, MessageEncoding? encoding) {
             if (mask == null) {
-                mask =
-                    NetworkMessageContentMask.NetworkMessageHeader |
-                    NetworkMessageContentMask.NetworkMessageNumber |
-                    NetworkMessageContentMask.DataSetMessageHeader |
-                    NetworkMessageContentMask.PublisherId |
-                    NetworkMessageContentMask.DataSetClassId;
+                mask = NetworkMessageContentMask.Default;
             }
             switch (encoding) {
                 case MessageEncoding.Uadp:
@@ -640,14 +635,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol {
         /// <returns></returns>
         public static uint ToStackType(this DataSetContentMask? mask, MessageEncoding? encoding) {
             if (mask == null) {
-                mask =
-                    DataSetContentMask.DataSetWriterId |
-                    DataSetContentMask.MetaDataVersion |
-                    DataSetContentMask.MajorVersion |
-                    DataSetContentMask.MinorVersion |
-                    DataSetContentMask.SequenceNumber |
-                    DataSetContentMask.Timestamp |
-                    DataSetContentMask.Status;
+                mask = DataSetContentMask.Default;
             }
             switch (encoding) {
                 case MessageEncoding.Uadp:
@@ -789,12 +777,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol {
         /// <returns></returns>
         public static UaDataSetFieldContentMask ToStackType(this DataSetFieldContentMask? mask) {
             if (mask == null) {
-                mask =
-                    DataSetFieldContentMask.StatusCode |
-                    DataSetFieldContentMask.SourceTimestamp |
-                    DataSetFieldContentMask.SourcePicoSeconds |
-                    DataSetFieldContentMask.ServerPicoSeconds |
-                    DataSetFieldContentMask.ServerTimestamp;
+                mask = DataSetFieldContentMask.Default;
             }
             var result = UaDataSetFieldContentMask.None;
             if (0 != (mask & DataSetFieldContentMask.StatusCode)) {

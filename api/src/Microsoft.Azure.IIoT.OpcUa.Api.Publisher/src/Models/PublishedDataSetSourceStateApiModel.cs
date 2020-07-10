@@ -15,16 +15,23 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Models {
     public class PublishedDataSetSourceStateApiModel {
 
         /// <summary>
+        /// Current endpoint state
+        /// </summary>
+        [DataMember(Name = "endpointState", Order = 0,
+            EmitDefaultValue = false)]
+        public EndpointConnectivityState? EndpointState { get; set; }
+
+        /// <summary>
         /// Last operation result
         /// </summary>
-        [DataMember(Name = "lastResult", Order = 0,
+        [DataMember(Name = "lastResult", Order = 1,
             EmitDefaultValue = false)]
         public ServiceResultApiModel LastResult { get; set; }
 
         /// <summary>
         /// Last result change
         /// </summary>
-        [DataMember(Name = "lastResultChange", Order = 1,
+        [DataMember(Name = "lastResultChange", Order = 2,
             EmitDefaultValue = false)]
         public DateTime? LastResultChange { get; set; }
     }

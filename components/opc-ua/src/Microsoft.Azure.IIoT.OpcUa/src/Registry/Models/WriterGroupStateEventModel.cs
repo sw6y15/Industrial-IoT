@@ -41,5 +41,10 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Models {
         /// Result if event is result of service call
         /// </summary>
         public ServiceResultModel LastResult { get; set; }
+
+        /// <summary>
+        /// Endpoint state if state changed
+        /// </summary>
+        public EndpointConnectivityState? EndpointState { get; set; }
     }
 }

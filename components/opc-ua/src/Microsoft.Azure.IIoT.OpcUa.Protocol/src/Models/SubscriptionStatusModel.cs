@@ -7,7 +7,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Models {
     using Microsoft.Azure.IIoT.OpcUa.Core.Models;
 
     /// <summary>
-    /// Subscription stat model
+    /// Subscription status model
     /// </summary>
     public class SubscriptionStatusModel {
 

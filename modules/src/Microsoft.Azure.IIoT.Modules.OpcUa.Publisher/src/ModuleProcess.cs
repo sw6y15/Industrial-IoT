@@ -288,7 +288,7 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher {
             public static void ConfigureServices(ContainerBuilder builder) {
 
                 // Publisher engine and encoders
-                builder.RegisterType<WriterGroupProcessingEngine>()
+                builder.RegisterType<WriterGroupDataCollector>()
                     .AsImplementedInterfaces().InstancePerLifetimeScope();
 
                 builder.RegisterType<UadpNetworkMessageEncoder>()

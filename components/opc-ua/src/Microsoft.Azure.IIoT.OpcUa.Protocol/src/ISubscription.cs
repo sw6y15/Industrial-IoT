@@ -37,6 +37,11 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol {
         event EventHandler<MonitoredItemStatusModel> OnMonitoredItemStatusChange;
 
         /// <summary>
+        /// Connectivity change events
+        /// </summary>
+        event EventHandler<EndpointConnectivityState> OnEndpointConnectivityChange;
+
+        /// <summary>
         /// Identifier of the subscription
         /// </summary>
         string Id { get; }
@@ -57,9 +62,12 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol {
         ConnectionModel Connection { get; }
 
         /// <summary>
-        /// Number of retries on the session
+        /// Update connectivity status
         /// </summary>
-        int NumberOfConnectionRetries { get; }
+        /// <param name="previous"></param>
+        /// <param name="newValue"></param>
+        void UpdateConnectivityState(EndpointConnectivityState previous,
+            EndpointConnectivityState newValue);
 
         /// <summary>
         /// Create snapshot

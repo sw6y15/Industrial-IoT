@@ -19,13 +19,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol {
         int SessionCount { get; }
 
         /// <summary>
-        /// gets the number of retiries for a speciffic session
-        /// </summary>
-        /// <param name="connection"></param>
-        /// <returns></returns>
-        int GetNumberOfConnectionRetries(ConnectionModel connection);
-
-        /// <summary>
         /// Get or create session for subscription
         /// </summary>
         /// <param name="connection"></param>

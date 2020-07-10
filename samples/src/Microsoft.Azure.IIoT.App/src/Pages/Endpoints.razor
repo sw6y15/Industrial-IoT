@@ -11,6 +11,7 @@
 @using Microsoft.Azure.IIoT.App.Services
 @using Microsoft.Azure.IIoT.App.Components.Pager
 @using Microsoft.Azure.IIoT.App.Components.ErrorMessage
+@using Microsoft.Azure.IIoT.OpcUa.Api.Core.Models;
 @using Microsoft.Azure.IIoT.OpcUa.Api.Registry.Models;
 @using Microsoft.Azure.IIoT.OpcUa.Api.Registry;
 @using Microsoft.Azure.IIoT.App.Common
@@ -25,15 +26,13 @@
 
 <h1>Endpoints</h1>
 
-@if (IsIdGiven(DiscovererId))
-{
+@if (IsIdGiven(DiscovererId)) {
     <div class="subtitle">
         DiscovererId: @DiscovererId
     </div>
 }
 
-@if (IsIdGiven(ApplicationId))
-{
+@if (IsIdGiven(ApplicationId)) {
     <div class="subtitle">
         AssetUri: @CommonHelper.ApplicationUri[ApplicationId]
     </div>
@@ -51,8 +50,7 @@
             <th class="width-small">Activation Action</th>
             <th class="width-small"></th>
 
-            @if (IsIdGiven(DiscovererId))
-            {
+            @if (IsIdGiven(DiscovererId)) {
                 <th class="width-xsmall">
                     @{var link = @NavigationManager.BaseUri + "discoverers/1";}
                     <a href="@link">
@@ -60,8 +58,7 @@
                     </a>
                 </th>
             }
-            else if (IsIdGiven(ApplicationId))
-            {
+            else if (IsIdGiven(ApplicationId)) {
                 <th class="width-xsmall">
                     @{var link = @NavigationManager.BaseUri + "applications/1";}
                     <a href="@link">
@@ -72,31 +69,28 @@
         </tr>
     </thead>
     <tbody>
-        @foreach (var endpoint in PagedendpointList.Results)
-        {
+        @foreach (var endpoint in PagedendpointList.Results) {
             <tr class="@GetEndpointVisibilityString(endpoint)">
                 @if (endpoint.EndpointModel.EndpointState == EndpointConnectivityState.Ready ||
-               endpoint.EndpointModel.EndpointState == EndpointConnectivityState.Unauthorized)
-                {
-                    <td class="hover-text width-large">
-                        <div>
-                            @{ string discover = DiscovererId ?? RegistryHelper.PathAll; }
-                            @{ string application = ApplicationId ?? RegistryHelper.PathAll; }
-                            @{ string supervisor = SupervisorId ?? RegistryHelper.PathAll; }
-                            <a href='browser/1/@discover/@application/@supervisor/@endpoint.EndpointModel.Registration.Id'>
-                                @endpoint.EndpointModel.Registration.Endpoint.Url
-                            </a>
-                        </div>
-                    </td>
-                }
-                else
-                {
-                    <td class="hover-text width-large">
-                        <div>
-                            @endpoint.EndpointModel.Registration.Endpoint.Url
-                        </div>
-                    </td>
-                }
+              endpoint.EndpointModel.EndpointState == EndpointConnectivityState.Unauthorized) {
+            <td class="hover-text width-large">
+                <div>
+                    @{ string discover = DiscovererId ?? RegistryHelper.PathAll; }
+                    @{ string application = ApplicationId ?? RegistryHelper.PathAll; }
+                    @{ string supervisor = SupervisorId ?? RegistryHelper.PathAll; }
+                    <a href='browser/1/@discover/@application/@supervisor/@endpoint.EndpointModel.Registration.Id'>
+                        @endpoint.EndpointModel.Registration.Endpoint.Url
+                    </a>
+                </div>
+            </td>
+        }
+        else {
+            <td class="hover-text width-large">
+                <div>
+                    @endpoint.EndpointModel.Registration.Endpoint.Url
+                </div>
+            </td>
+        }
                 <td class="hover-text width-small">
                     <div>
                         @endpoint.EndpointModel.Registration.Endpoint.SecurityMode
@@ -127,20 +121,17 @@
                     @{bool isDisabled = !IsEndpointSeen(endpoint);}
                     <button class="btn btn-primary" disabled="@isDisabled" @onclick="(() => SetActivationAsync(endpoint))">@activationStatus</button>
                 </td>
-                @if (IsEndpointSeen(endpoint) && IsEndpointActivated(endpoint))
-                {
+                @if (IsEndpointSeen(endpoint) && IsEndpointActivated(endpoint)) {
                     <td class="width-small space-wrap">
                         <div>
                             <a class="ellipsis-space" href='publishedNodes/1/@endpoint.EndpointModel.Registration.Id/@DiscovererId/@ApplicationId/@SupervisorId'>Published Nodes</a>
                         </div>
                     </td>
                 }
-                else
-                {
+                else {
                     <td class="width-small"></td>
                 }
-                @if (IsIdGiven(DiscovererId) || IsIdGiven(ApplicationId))
-                {
+                @if (IsIdGiven(DiscovererId) || IsIdGiven(ApplicationId)) {
                     <td class="width-small"></td>
                 }
             </tr>

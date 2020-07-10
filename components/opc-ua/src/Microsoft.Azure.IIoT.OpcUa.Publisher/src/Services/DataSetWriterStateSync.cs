@@ -43,6 +43,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                     var sourceState = new PublishedDataSetSourceStateModel {
                         LastResultChange = message.TimeStamp,
                         LastResult = message.LastResult,
+                        EndpointState = message.EndpointState,
                         // ...
                     };
 

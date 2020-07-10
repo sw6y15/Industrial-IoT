@@ -49,22 +49,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
         }
 
         /// <inheritdoc/>
-        public int GetNumberOfConnectionRetries(ConnectionModel connection) {
-
-            var key = new ConnectionIdentifier(connection);
-            _lock.Wait();
-            try {
-                if (!_sessions.TryGetValue(key, out var wrapper)) {
-                    return 0;
-                }
-                return wrapper.NumberOfConnectRetries;
-            }
-            finally {
-                _lock.Release();
-            }
-        }
-
-        /// <inheritdoc/>
         public Session GetOrCreateSession(ConnectionModel connection,
             bool createIfNotExists) {
 
@@ -119,7 +103,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
                 if (!_sessions.TryGetValue(key, out var wrapper)) {
                     return;
                 }
-                if (onlyIfEmpty && wrapper._subscriptions.Count == 0) {
+                if (onlyIfEmpty && wrapper.Subscriptions.Count == 0) {
                     wrapper.State = SessionState.Disconnect;
                     TriggerKeepAlive();
                 }
@@ -145,7 +129,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
                     };
                     _sessions.Add(id, wrapper);
                 }
-                wrapper._subscriptions.AddOrUpdate(subscription.Id, subscription);
+                wrapper.Subscriptions.AddOrUpdate(subscription.Id, subscription);
                 _logger.Information("Subscription '{subscriptionId}' registered/updated in session '{id}' in state {state}",
                     subscription.Id, id, wrapper.State);
                 if (wrapper.State == SessionState.Running) {
@@ -166,7 +150,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
                 if (!_sessions.TryGetValue(id, out var wrapper)) {
                     return;
                 }
-                if (wrapper._subscriptions.TryRemove(subscription.Id, out _)) {
+                if (wrapper.Subscriptions.TryRemove(subscription.Id, out _)) {
                     _logger.Information("Subscription '{subscriptionId}' unregistered from session '{sessionId}' in state {state}",
                         subscription.Id, id, wrapper.State);
                 }
@@ -287,8 +271,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
         private async Task HandleRetryAsync(ConnectionIdentifier id,
             SessionWrapper wrapper, CancellationToken ct) {
             try {
-
-                if (!wrapper._subscriptions.Any()) {
+                if (!wrapper.Subscriptions.Any()) {
                     if (wrapper.IdleCount < wrapper.MaxKeepAlives) {
                         wrapper.IdleCount++;
                     }
@@ -310,19 +293,23 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
                     wrapper.Session.Reconnect();
                     wrapper.ReportedStatus = StatusCodes.Good;
                     wrapper.State = SessionState.Running;
+                    wrapper.Connectivity = EndpointConnectivityState.Ready;
                     wrapper.MissedKeepAlives = 0;
 
                     // reactivate all subscriptons
-                    foreach (var subscription in wrapper._subscriptions.Values) {
+                    foreach (var subscription in wrapper.Subscriptions.Values) {
                         if (!ct.IsCancellationRequested) {
                             await subscription.ActivateAsync(wrapper.Session).ConfigureAwait(false);
                         }
                     }
                 }
+                else {
+                    wrapper.Connectivity = EndpointConnectivityState.Disconnected;
+                }
                 return;
             }
             catch (Exception e) {
-                wrapper.NumberOfConnectRetries++;
+                wrapper.Connectivity = ToConnectivityState(e);
                 if (e is ServiceResultException sre) {
                     switch (sre.StatusCode) {
                         case StatusCodes.BadNotConnected:
@@ -374,7 +361,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
             SessionWrapper wrapper, CancellationToken ct) {
             try {
                 // check if session requires clenup
-                if (!wrapper._subscriptions.Any()) {
+                if (!wrapper.Subscriptions.Any()) {
                     if (wrapper.IdleCount < wrapper.MaxKeepAlives) {
                         wrapper.IdleCount++;
                     }
@@ -424,18 +411,20 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
                 foreach (var endpointUrl in endpointUrlCandidates) {
                     try {
                         if (!ct.IsCancellationRequested) {
+                            wrapper.Connectivity = EndpointConnectivityState.Connecting;
                             var session = await CreateSessionAsync(endpointUrl, id, wrapper).ConfigureAwait(false);
                             if (session != null) {
                                 _logger.Information("Connected to '{endpointUrl}'", endpointUrl);
                                 session.Handle = wrapper;
                                 wrapper.Session = session;
-                                foreach (var subscription in wrapper._subscriptions.Values) {
+                                foreach (var subscription in wrapper.Subscriptions.Values) {
                                     await subscription.EnableAsync(wrapper.Session).ConfigureAwait(false);
                                 }
-                                foreach (var subscription in wrapper._subscriptions.Values) {
+                                foreach (var subscription in wrapper.Subscriptions.Values) {
                                     await subscription.ActivateAsync(wrapper.Session).ConfigureAwait(false);
                                 }
                                 wrapper.State = SessionState.Running;
+                                wrapper.Connectivity = EndpointConnectivityState.Ready;
                                 _logger.Debug("Session '{id}' successfully initialized", id);
                                 return;
                             }
@@ -460,7 +449,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
             catch (Exception ex) {
                 _logger.Error(ex, "Failed to create session '{id}'", id);
             }
-            wrapper.NumberOfConnectRetries++;
+            wrapper.Connectivity = EndpointConnectivityState.Error;
             wrapper.State = SessionState.Failed;
         }
 
@@ -479,13 +468,14 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
                     if (StatusCode.IsGood(wrapper.ReportedStatus)) {
                         if (wrapper.Session.Connected &&
                             !wrapper.Session.KeepAliveStopped) {
-                            foreach (var subscription in wrapper._subscriptions.Values) {
+                            foreach (var subscription in wrapper.Subscriptions.Values) {
                                 if (!ct.IsCancellationRequested) {
                                     await subscription.ActivateAsync(wrapper.Session).ConfigureAwait(false);
                                 }
                             }
                             _logger.Debug("Refreshing done for session '{id}'", id);
                             wrapper.State = SessionState.Running;
+                            wrapper.Connectivity = EndpointConnectivityState.Ready;
                             return;
                         }
                         wrapper.ReportedStatus = StatusCodes.BadNoCommunication;
@@ -495,6 +485,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
                 }
                 else {
                     wrapper.State = SessionState.Failed;
+                    wrapper.Connectivity = EndpointConnectivityState.Error;
                     await HandleInitAsync(id, wrapper, ct).ConfigureAwait(false);
                 }
             }
@@ -520,6 +511,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
             }
             try {
                 if (wrapper != null && wrapper.Session != null) {
+                    wrapper.Connectivity = EndpointConnectivityState.Disconnected;
                     wrapper.Session.Handle = null;
                     // Remove subscriptions
                     if (wrapper.Session.SubscriptionCount > 0) {
@@ -642,7 +634,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
                 session.KeepAlive += Session_KeepAlive;
                 session.Notification += Session_Notification;
 
-
                 // TODO - store the created session id (node id)?
                 if (sessionName != session.SessionName) {
                     _logger.Warning("Session '{id}' created with a revised name '{name}'",
@@ -668,9 +659,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
         /// <param name="session"></param>
         /// <param name="e"></param>
         private void Session_Notification(Session session, NotificationEventArgs e) {
-
             try {
-                _logger.Debug("Notification for session '{id}', subscription '{displayName}' - sequence# {sequence}-{publishTime}",
+                _logger.Debug(
+                    "Notification for session '{id}', subscription '{displayName}' - sequence# {sequence}-{publishTime}",
                     session?.Handle is SessionWrapper wrapper ? wrapper?.Id : session?.SessionName,
                     e.Subscription?.DisplayName, e?.NotificationMessage?.SequenceNumber,
                     e.NotificationMessage?.PublishTime);
@@ -698,7 +689,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
         /// <param name="session"></param>
         /// <param name="e"></param>
         private void Session_KeepAlive(Session session, KeepAliveEventArgs e) {
-
             try {
                 if (session?.Handle is SessionWrapper wrapper) {
 
@@ -708,7 +698,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
                     if (ServiceResult.IsGood(e.Status)) {
                         wrapper.MissedKeepAlives = 0;
 
-                        if (!wrapper._subscriptions.Any()) {
+                        if (!wrapper.Subscriptions.Any()) {
                             if (wrapper.IdleCount < wrapper.MaxKeepAlives) {
                                 wrapper.IdleCount++;
                             }
@@ -743,6 +733,11 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
             }
         }
 
+        /// <summary>
+        /// Convert to stack security mode
+        /// </summary>
+        /// <param name="securityMode"></param>
+        /// <returns></returns>
         private static MessageSecurityMode? ToMessageSecurityMode(SecurityMode? securityMode) {
             if (!securityMode.HasValue) {
                 return null;
@@ -759,6 +754,69 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
                 default:
                     throw new NotSupportedException($"The security mode '{securityMode}' is not implemented");
             }
+        }
+
+        /// <summary>
+        /// Convert exception to connectivity state
+        /// </summary>
+        /// <param name="ex"></param>
+        /// <param name="reconnecting"></param>
+        /// <returns></returns>
+        public EndpointConnectivityState ToConnectivityState(Exception ex, bool reconnecting = true) {
+            var state = EndpointConnectivityState.Error;
+            switch (ex) {
+                case ServiceResultException sre:
+                    switch (sre.StatusCode) {
+                        case StatusCodes.BadNoContinuationPoints:
+                        case StatusCodes.BadLicenseLimitsExceeded:
+                        case StatusCodes.BadTcpServerTooBusy:
+                        case StatusCodes.BadTooManySessions:
+                        case StatusCodes.BadTooManyOperations:
+                            state = EndpointConnectivityState.Busy;
+                            break;
+                        case StatusCodes.BadCertificateRevocationUnknown:
+                        case StatusCodes.BadCertificateIssuerRevocationUnknown:
+                        case StatusCodes.BadCertificateRevoked:
+                        case StatusCodes.BadCertificateIssuerRevoked:
+                        case StatusCodes.BadCertificateChainIncomplete:
+                        case StatusCodes.BadCertificateIssuerUseNotAllowed:
+                        case StatusCodes.BadCertificateUseNotAllowed:
+                        case StatusCodes.BadCertificateUriInvalid:
+                        case StatusCodes.BadCertificateTimeInvalid:
+                        case StatusCodes.BadCertificateIssuerTimeInvalid:
+                        case StatusCodes.BadCertificateInvalid:
+                        case StatusCodes.BadCertificateHostNameInvalid:
+                        case StatusCodes.BadNoValidCertificates:
+                            state = EndpointConnectivityState.CertificateInvalid;
+                            break;
+                        case StatusCodes.BadCertificateUntrusted:
+                        case StatusCodes.BadSecurityChecksFailed:
+                            state = EndpointConnectivityState.NoTrust;
+                            break;
+                        case StatusCodes.BadSecureChannelClosed:
+                            state = reconnecting ? EndpointConnectivityState.NoTrust :
+                                EndpointConnectivityState.Error;
+                            break;
+                        case StatusCodes.BadRequestTimeout:
+                        case StatusCodes.BadNotConnected:
+                            state = EndpointConnectivityState.NotReachable;
+                            break;
+                        case StatusCodes.BadUserAccessDenied:
+                        case StatusCodes.BadUserSignatureInvalid:
+                            state = EndpointConnectivityState.Unauthorized;
+                            break;
+                        default:
+                            state = EndpointConnectivityState.Error;
+                            break;
+                    }
+                    _logger.Debug("{result} => {state}", sre.Result, state);
+                    break;
+                default:
+                    state = EndpointConnectivityState.Error;
+                    _logger.Debug("{message} => {state}", ex.Message, state);
+                    break;
+            }
+            return state;
         }
 
         /// <summary>
@@ -846,6 +904,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
             /// Session's identifier
             /// </summary>
             public string Id { get; set; }
+
             /// <summary>
             /// Session
             /// </summary>
@@ -864,7 +923,17 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
             /// <summary>
             /// the number of connect retries
             /// </summary>
-            public int NumberOfConnectRetries { get; set; }
+            public EndpointConnectivityState Connectivity {
+                get => _connectivity;
+                set {
+                    if (value != _connectivity) {
+                        foreach (var subscription in Subscriptions.Values) {
+                            subscription.UpdateConnectivityState(_connectivity, value);
+                        }
+                        _connectivity = value;
+                    }
+                }
+            }
 
             /// <summary>
             /// Reconnecting
@@ -889,8 +958,10 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
             /// <summary>
             /// registered subscriptions
             /// </summary>
-            public ConcurrentDictionary<string, ISubscription> _subscriptions { get; }
+            public ConcurrentDictionary<string, ISubscription> Subscriptions { get; }
                 = new ConcurrentDictionary<string, ISubscription>();
+
+            private EndpointConnectivityState _connectivity = EndpointConnectivityState.Disconnected;
         }
 
         /// <summary>
@@ -903,32 +974,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
             Refresh,
             Retry,
             Disconnect
-        }
-
-        /// <summary>
-        /// Get endpoint from session
-        /// </summary>
-        /// <param name="session"></param>
-        /// <returns></returns>
-        public static EndpointIdentifier GetEndpointId(SessionClient session) {
-            var endpointModel = new EndpointModel {
-                Url = session.Endpoint.EndpointUrl.TrimEnd('/'),
-                SecurityPolicy = session.Endpoint.SecurityPolicyUri
-            };
-            switch (session.Endpoint.SecurityMode) {
-                case MessageSecurityMode.Invalid:
-                    throw new Exception("Invalid security mode: invalid");
-                case MessageSecurityMode.None:
-                    endpointModel.SecurityMode = SecurityMode.None;
-                    break;
-                case MessageSecurityMode.Sign:
-                    endpointModel.SecurityMode = SecurityMode.Sign;
-                    break;
-                case MessageSecurityMode.SignAndEncrypt:
-                    endpointModel.SecurityMode = SecurityMode.SignAndEncrypt;
-                    break;
-            }
-            return new EndpointIdentifier(endpointModel);
         }
 
         /// <summary>

@@ -719,7 +719,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Registry.Models {
                 NotSeenSince = model.NotSeenSince,
                 Registration = model.Registration.ToApiModel(),
                 ActivationState = (EntityActivationState?)model.ActivationState,
-                EndpointState = (EndpointConnectivityState?)model.EndpointState,
+                EndpointState = (Core.Models.EndpointConnectivityState?)model.EndpointState,
                 OutOfSync = model.OutOfSync
             };
         }
@@ -739,7 +739,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Registry.Models {
                 NotSeenSince = model.NotSeenSince,
                 Registration = model.Registration.ToServiceModel(),
                 ActivationState = (OpcUa.Registry.Models.EntityActivationState?)model.ActivationState,
-                EndpointState = (OpcUa.Registry.Models.EndpointConnectivityState?)model.EndpointState,
+                EndpointState = (OpcUa.Core.Models.EndpointConnectivityState?)model.EndpointState,
                 OutOfSync = model.OutOfSync
             };
         }
@@ -842,7 +842,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Registry.Models {
                 Url = model.Url,
                 Connected = model.Connected,
                 Activated = model.Activated,
-                EndpointState = (EndpointConnectivityState?)model.EndpointState,
+                EndpointState = (Core.Models.EndpointConnectivityState?)model.EndpointState,
                 Certificate = model.Certificate,
                 SecurityPolicy = model.SecurityPolicy,
                 SecurityMode = (Core.Models.SecurityMode?)model.SecurityMode,
@@ -868,7 +868,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Api.Registry.Models {
                 Url = model.Url,
                 Connected = model.Connected,
                 Activated = model.Activated,
-                EndpointState = (OpcUa.Registry.Models.EndpointConnectivityState?)model.EndpointState,
+                EndpointState = (OpcUa.Core.Models.EndpointConnectivityState?)model.EndpointState,
                 Certificate = model.Certificate,
                 SecurityPolicy = model.SecurityPolicy,
                 SecurityMode = (OpcUa.Core.Models.SecurityMode?)model.SecurityMode,

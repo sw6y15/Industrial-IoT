@@ -97,19 +97,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                 PublishingInterval = _legacyCliModel.BatchTriggerInterval,
                 BatchSize = _legacyCliModel.BatchSize,
                 MaxNetworkMessageSize = _legacyCliModel.MaxMessageSize,
-                DataSetWriters = ToDataSetWriters(items, _legacyCliModel).ToList(),
-                MessageSettings = new WriterGroupMessageSettingsModel {
-                    NetworkMessageContentMask =
-                        NetworkMessageContentMask.PublisherId |
-                        NetworkMessageContentMask.WriterGroupId |
-                        NetworkMessageContentMask.NetworkMessageNumber |
-                        NetworkMessageContentMask.SequenceNumber |
-                        NetworkMessageContentMask.PayloadHeader |
-                        NetworkMessageContentMask.Timestamp |
-                        NetworkMessageContentMask.DataSetClassId |
-                        NetworkMessageContentMask.NetworkMessageHeader |
-                        NetworkMessageContentMask.DataSetMessageHeader
-                }
+                DataSetWriters = ToDataSetWriters(items, _legacyCliModel).ToList()
             };
             _logger.Information("Converted items to jobs in {elapsed}", sw.Elapsed);
             return writerGroup;

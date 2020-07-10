@@ -8,11 +8,10 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
     using Microsoft.Azure.IIoT.OpcUa.Publisher.Models;
     using Microsoft.Azure.IIoT.OpcUa.Publisher;
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using System.Linq;
-    using Xunit;
-    using System.Collections.Concurrent;
 
     /// <summary>
     /// Receive updates to writer group registry and update the engine as result.
@@ -20,15 +19,16 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
     /// and Edge module, where the notifications change the twin state and cause
     /// the action here.
     /// </summary>
-    public class WriterRegistryEngineConnector : IWriterGroupRegistryListener,
+    public class WriterRegistryConnector : IWriterGroupRegistryListener,
         IDataSetWriterRegistryListener {
 
-        public WriterRegistryEngineConnector(IDataSetWriterRegistry registry,
-            Func<IWriterGroupProcessingEngine> engine,
+        public WriterRegistryConnector(IDataSetWriterRegistry registry,
+            Func<IWriterGroupDataCollector> collectors, Func<IWriterGroupMessageEmitter> emitters,
             IPublisherEvents<IWriterGroupRegistryListener> b1,
             IPublisherEvents<IDataSetWriterRegistryListener> b2) {
             _registry = registry;
-            _engine = engine;
+            _collectors = collectors;
+            _emitters = emitters;
 
             b1.Register(this);
             b2.Register(this);
@@ -87,7 +87,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         public Task OnWriterGroupActivatedAsync(PublisherOperationContextModel context,
             WriterGroupInfoModel writerGroup) {
             if (_twins.TryGetValue(writerGroup.WriterGroupId, out var writerGroupTwin)) {
-                writerGroupTwin.Activate(_engine.Invoke());
+                writerGroupTwin.Activate(_collectors.Invoke(), _emitters.Invoke());
             }
             return Task.CompletedTask;
         }
@@ -116,75 +116,83 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         /// a new engine instance on activation.  Kills the engine on deactivation.
         /// </summary>
         private class WriterGroupTwin {
-
             public string WriterGroupId => _group.WriterGroupId;
 
             public WriterGroupInfoModel Group {
                 get => _group;
                 set {
                     _group = value.Clone();
-                    UpdateEngine();
+                    UpdateWriterGroupProcessor();
                 }
             }
 
-            public bool Activated => _engine != null;
+            public bool Activated => _collector != null;
 
             public HashSet<DataSetWriterModel> Writers { get; } = new HashSet<DataSetWriterModel>(
                 Compare.Using<DataSetWriterModel>((a, b) => a.DataSetWriterId == b.DataSetWriterId));
 
-            public void Activate(IWriterGroupProcessingEngine engine) {
-                _engine = engine;
-                UpdateEngine();
-                _engine.AddWriters(Writers);
+            public void Activate(IWriterGroupDataCollector collector, IWriterGroupMessageEmitter emitter) {
+                _collector = collector;
+                _emitter = emitter;
+                UpdateWriterGroupProcessor();
+                _collector.AddWriters(Writers);
             }
 
-            private void UpdateEngine() {
-                if (_engine == null) {
+            private void UpdateWriterGroupProcessor() {
+                if (_collector == null) {
                     return;
                 }
+
                 // Apply now
-                _engine.Priority = _group.Priority;
-                _engine.BatchSize = _group.BatchSize;
-                _engine.PublishingInterval = _group.PublishingInterval;
-                _engine.DataSetOrdering = _group.MessageSettings?.DataSetOrdering;
-                _engine.GroupVersion = _group.MessageSettings?.GroupVersion;
-                _engine.HeaderLayoutUri = _group.HeaderLayoutUri;
-                _engine.KeepAliveTime = _group.KeepAliveTime;
-                _engine.MaxNetworkMessageSize = _group.MaxNetworkMessageSize;
-                _engine.MessageSchema = MessageSchemaEx.ToMessageSchemaMimeType(_group.Schema, _group.Encoding);
-                _engine.NetworkMessageContentMask = _group.MessageSettings?.NetworkMessageContentMask;
-                _engine.PublishingOffset = _group.MessageSettings?.PublishingOffset?.ToList();
-                _engine.SamplingOffset = _group.MessageSettings?.SamplingOffset;
+                _emitter.WriterGroupId = _group.WriterGroupId;
+                _emitter.MaxNetworkMessageSize = _group.MaxNetworkMessageSize;
+                _emitter.BatchSize = _group.BatchSize;
+                _emitter.PublishingInterval = _group.PublishingInterval;
+                _emitter.Encoding = _group.Encoding;
+                _emitter.Schema = _group.Schema;
+                _emitter.HeaderLayoutUri = _group.HeaderLayoutUri;
+                _emitter.DataSetOrdering = _group.MessageSettings?.DataSetOrdering;
+                _emitter.MessageContentMask = _group.MessageSettings?.NetworkMessageContentMask;
+                _emitter.PublishingOffset = _group.MessageSettings?.PublishingOffset?.ToList();
+
+                _collector.Priority = _group.Priority;
+                _collector.GroupVersion = _group.MessageSettings?.GroupVersion;
+                _collector.KeepAliveTime = _group.KeepAliveTime;
+                _collector.SamplingOffset = _group.MessageSettings?.SamplingOffset;
             }
 
             public void Deactivate() {
                 // _engine.RemoveAllWriters();
-                (_engine as IDisposable).Dispose();
-                _engine = null;
+                (_emitter as IDisposable).Dispose();
+                (_collector as IDisposable).Dispose();
+                _collector = null;
+                _emitter = null;
             }
 
             public void AddWriter(DataSetWriterModel writer) {
                 Writers.Remove(writer); // Remove and add to update
                 Writers.Add(writer);
-                if (_engine != null) {
-                    _engine.AddWriters(writer.YieldReturn());
+                if (_collector != null) {
+                    _collector.AddWriters(writer.YieldReturn());
                 }
             }
 
             public void RemoveWriter(string dataSetWriterId) {
-                if (_engine != null) {
-                    _engine.RemoveWriters(dataSetWriterId.YieldReturn());
+                if (_collector != null) {
+                    _collector.RemoveWriters(dataSetWriterId.YieldReturn());
                 }
                 Writers.RemoveWhere(w => w.DataSetWriterId == dataSetWriterId);
             }
 
-            private IWriterGroupProcessingEngine _engine;
+            private IWriterGroupDataCollector _collector;
+            private IWriterGroupMessageEmitter _emitter;
             private WriterGroupInfoModel _group;
         }
 
         private readonly ConcurrentDictionary<string, WriterGroupTwin> _twins =
             new ConcurrentDictionary<string, WriterGroupTwin>();
         private readonly IDataSetWriterRegistry _registry;
-        private readonly Func<IWriterGroupProcessingEngine> _engine;
+        private readonly Func<IWriterGroupDataCollector> _collectors;
+        private readonly Func<IWriterGroupMessageEmitter> _emitters;
     }
 }

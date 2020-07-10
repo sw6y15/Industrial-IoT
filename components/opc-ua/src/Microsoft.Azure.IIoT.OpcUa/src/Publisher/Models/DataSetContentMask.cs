@@ -50,6 +50,18 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
         /// <summary>
         /// Sequence number
         /// </summary>
-        SequenceNumber = 0x80
+        SequenceNumber = 0x80,
+
+        /// <summary>
+        /// Default
+        /// </summary>
+        Default =
+            DataSetWriterId |
+            MetaDataVersion |
+            MajorVersion |
+            MinorVersion |
+            SequenceNumber |
+            Timestamp |
+            Status
     }
 }

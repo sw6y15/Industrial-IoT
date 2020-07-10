@@ -70,6 +70,16 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
         /// <summary>
         /// Extra fields included
         /// </summary>
-        ExtensionFields = 0x200000
+        ExtensionFields = 0x200000,
+
+        /// <summary>
+        /// Default
+        /// </summary>
+        Default =
+            StatusCode |
+            SourceTimestamp |
+            SourcePicoSeconds |
+            ServerPicoSeconds |
+            ServerTimestamp
     }
 }

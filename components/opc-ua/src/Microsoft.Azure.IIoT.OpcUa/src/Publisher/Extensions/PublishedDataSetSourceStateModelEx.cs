@@ -18,10 +18,13 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
         /// <returns></returns>
         public static PublishedDataSetSourceStateModel Clone(
             this PublishedDataSetSourceStateModel model) {
-            if (model?.LastResultChange == null) {
+            if (model?.LastResultChange == null &&
+                model?.LastResult == null &&
+                model?.EndpointState == null) {
                 return null;
             }
             return new PublishedDataSetSourceStateModel {
+                EndpointState = model.EndpointState,
                 LastResultChange = model.LastResultChange,
                 LastResult = model.LastResult.Clone()
             };

@@ -43,32 +43,66 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
         }
 
         /// <summary>
-        /// Get messaging mode and encoding from schema type string
+        /// Match to message schema
         /// </summary>
-        /// <param name="messageSchema"></param>
+        /// <param name="schema"></param>
+        /// <param name="mimeType"></param>
+        /// <returns></returns>
+        public static bool Matches(this MessageSchema schema, string mimeType) {
+            switch (mimeType) {
+                case MessageSchemaTypes.MonitoredItemMessageBinary:
+                case MessageSchemaTypes.MonitoredItemMessageJson:
+                    return schema == MessageSchema.Samples;
+                case MessageSchemaTypes.NetworkMessageUadp:
+                case MessageSchemaTypes.NetworkMessageJson:
+                    return schema == MessageSchema.PubSub;
+                case null:
+                default:
+                    throw new ArgumentException(nameof(mimeType),
+                        $"Unknown type {mimeType}");
+            }
+        }
+
+        /// <summary>
+        /// Match encoding
+        /// </summary>
+        /// <param name="mimeType"></param>
         /// <param name="encoding"></param>
         /// <returns></returns>
-        public static MessageSchema? ParseMessageSchemaMimeType(string messageSchema,
-            out MessageEncoding? encoding) {
-            switch (messageSchema) {
-                case MessageSchemaTypes.MonitoredItemMessageBinary:
-                    encoding = MessageEncoding.Binary;
-                    return MessageSchema.Samples;
-                case MessageSchemaTypes.MonitoredItemMessageJson:
-                    encoding = MessageEncoding.Json;
-                    return MessageSchema.Samples;
+        public static bool Matches(this MessageEncoding encoding, string mimeType) {
+            switch (mimeType) {
                 case MessageSchemaTypes.NetworkMessageUadp:
-                    encoding = MessageEncoding.Uadp;
-                    return MessageSchema.PubSub;
+                case MessageSchemaTypes.MonitoredItemMessageBinary:
+                    return
+                        encoding == MessageEncoding.Uadp ||
+                        encoding == MessageEncoding.Binary;
                 case MessageSchemaTypes.NetworkMessageJson:
-                    encoding = MessageEncoding.Json;
-                    return MessageSchema.PubSub;
-                case null:
-                    encoding = MessageEncoding.Uadp;
-                    return MessageSchema.PubSub;
+                case MessageSchemaTypes.MonitoredItemMessageJson:
+                    return encoding == MessageEncoding.Json;
                 default:
-                    throw new ArgumentException(nameof(messageSchema),
-                        $"Unknown type {messageSchema}");
+                    throw new ArgumentException(nameof(mimeType),
+                        $"Unknown type {mimeType}");
+            }
+        }
+
+        /// <summary>
+        /// Match content mask
+        /// </summary>
+        /// <param name="mimeType"></param>
+        /// <param name="content"></param>
+        /// <returns></returns>
+        public static bool Matches(this NetworkMessageContentMask content, string mimeType) {
+            var isNetworkMessage = !content.HasFlag(NetworkMessageContentMask.NetworkMessageHeader);
+            var isDataSetMessage = !content.HasFlag(NetworkMessageContentMask.DataSetMessageHeader);
+            switch (mimeType) {
+                case MessageSchemaTypes.NetworkMessageUadp:
+                case MessageSchemaTypes.MonitoredItemMessageBinary:
+                case MessageSchemaTypes.NetworkMessageJson:
+                case MessageSchemaTypes.MonitoredItemMessageJson:
+                    return true; // TODO -
+                default:
+                    throw new ArgumentException(nameof(mimeType),
+                        $"Unknown type {mimeType}");
             }
         }
     }

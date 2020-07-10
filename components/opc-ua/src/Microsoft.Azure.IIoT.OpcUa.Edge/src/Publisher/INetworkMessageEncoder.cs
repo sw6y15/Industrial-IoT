@@ -5,6 +5,7 @@
 
 namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher {
     using Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Models;
+    using Microsoft.Azure.IIoT.OpcUa.Publisher.Models;
     using System.Collections.Generic;
 
     /// <summary>
@@ -13,9 +14,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher {
     public interface INetworkMessageEncoder {
 
         /// <summary>
-        /// Messaging encoding
+        /// Messaging schema the encoder produces
         /// </summary>
-        string MessageScheme { get; }
+        string MessageSchema { get; }
 
         /// <summary>
         /// Number of notifications that are too big to be processed to IotHub Messages
@@ -45,19 +46,31 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher {
         /// <summary>
         /// Encodes the list of messages into single message NetworkMessageModel list
         /// </summary>
+        /// <param name="writerGroupId"></param>
         /// <param name="message"></param>
+        /// <param name="headerLayoutUri"></param>
+        /// <param name="contentMask"></param>
+        /// <param name="order"></param>
         /// <param name="maxMessageSize"></param>
         /// <returns></returns>
-        IEnumerable<NetworkMessageModel> Encode(
-            IEnumerable<DataSetWriterMessageModel> message, int maxMessageSize);
+        IEnumerable<NetworkMessageModel> Encode(string writerGroupId,
+            IEnumerable<DataSetWriterMessageModel> message,
+            string headerLayoutUri, NetworkMessageContentMask? contentMask,
+            DataSetOrderingType? order, int maxMessageSize);
 
         /// <summary>
         /// Encodes the list of messages into batched message list
         /// </summary>
+        /// <param name="writerGroupId"></param>
+        /// <param name="headerLayoutUri"></param>
+        /// <param name="contentMask"></param>
+        /// <param name="order"></param>
         /// <param name="messages"></param>
         /// <param name="maxMessageSize"></param>
         /// <returns></returns>
-        IEnumerable<NetworkMessageModel> EncodeBatch(
-            IEnumerable<DataSetWriterMessageModel> messages, int maxMessageSize);
+        IEnumerable<NetworkMessageModel> EncodeBatch(string writerGroupId,
+            IEnumerable<DataSetWriterMessageModel> messages,
+            string headerLayoutUri, NetworkMessageContentMask? contentMask,
+            DataSetOrderingType? order, int maxMessageSize);
     }
 }

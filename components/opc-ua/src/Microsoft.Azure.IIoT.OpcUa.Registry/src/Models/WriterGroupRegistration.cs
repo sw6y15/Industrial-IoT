@@ -106,10 +106,16 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Models {
         public TimeSpan? KeepAliveTime { get; set; }
 
         /// <summary>
+        /// Message schema
+        /// </summary>
+        [DataMember]
+        public MessageSchema? Schema { get; set; }
+
+        /// <summary>
         /// Message encoding
         /// </summary>
         [DataMember]
-        public string MessageSchema { get; set; }
+        public MessageEncoding? Encoding { get; set; }
 
         /// <summary>
         /// Batch buffer size
@@ -128,7 +134,10 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Models {
             if (SiteId != registration.SiteId) {
                 return false;
             }
-            if (MessageSchema != registration.MessageSchema) {
+            if (Schema != registration.Schema) {
+                return false;
+            }
+            if (Encoding != registration.Encoding) {
                 return false;
             }
             if (KeepAliveTime != registration.KeepAliveTime) {
@@ -191,7 +200,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Models {
             hashCode = (hashCode * -1521134295) +
                 EqualityComparer<string>.Default.GetHashCode(SiteId);
             hashCode = (hashCode * -1521134295) +
-                EqualityComparer<string>.Default.GetHashCode(MessageSchema);
+                EqualityComparer<MessageSchema?>.Default.GetHashCode(Schema);
+            hashCode = (hashCode * -1521134295) +
+                EqualityComparer<MessageEncoding?>.Default.GetHashCode(Encoding);
             hashCode = (hashCode * -1521134295) +
                 EqualityComparer<TimeSpan?>.Default.GetHashCode(KeepAliveTime);
             hashCode = (hashCode * -1521134295) +

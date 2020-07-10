@@ -1,14 +1,13 @@
-// ------------------------------------------------------------
+﻿// ------------------------------------------------------------
 //  Copyright (c) Microsoft Corporation.  All rights reserved.
 //  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
 namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
     using Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Models;
+    using Microsoft.Azure.IIoT.OpcUa.Publisher.Models;
     using Microsoft.Azure.IIoT.OpcUa.Core;
     using Microsoft.Azure.IIoT.OpcUa.Protocol;
-    using Microsoft.Azure.IIoT.OpcUa.Protocol.Models;
-    using Microsoft.Azure.IIoT.OpcUa.Publisher.Models;
     using Opc.Ua;
     using Opc.Ua.Encoders;
     using Opc.Ua.Extensions;
@@ -21,12 +20,12 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
     using System.Text;
 
     /// <summary>
-    /// Creates pub/sub encoded messages
+    /// Publisher monitored item message encoder
     /// </summary>
-    public class JsonNetworkMessageEncoder : INetworkMessageEncoder {
+    public class JsonSampleMessageEncoder : INetworkMessageEncoder {
 
         /// <inheritdoc/>
-        public string MessageScheme => MessageSchemaTypes.NetworkMessageJson;
+        public string MessageSchema => MessageSchemaTypes.MonitoredItemMessageJson;
 
         /// <inheritdoc/>
         public uint NotificationsDroppedCount { get; private set; }
@@ -44,14 +43,16 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         public double AvgMessageSize { get; private set; }
 
         /// <inheritdoc/>
-        public IEnumerable<NetworkMessageModel> EncodeBatch(
-            IEnumerable<DataSetWriterMessageModel> messages, int maxMessageSize) {
+        public IEnumerable<NetworkMessageModel> EncodeBatch(string writerGroupId,
+            IEnumerable<DataSetWriterMessageModel> messages,
+            string headerLayoutUri, NetworkMessageContentMask? contentMask,
+            OpcUa.Publisher.Models.DataSetOrderingType? order, int maxMessageSize) {
 
             // by design all messages are generated in the same session context,
             // therefore it is safe to get the first message's context
             var encodingContext = messages.FirstOrDefault(m => m.ServiceMessageContext != null)
                 ?.ServiceMessageContext;
-            var notifications = GetNetworkMessages(messages, encodingContext);
+            var notifications = GetMonitoredItemMessages(messages, encodingContext);
             if (notifications.Count() == 0) {
                 yield break;
             }
@@ -59,7 +60,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             var processing = current.MoveNext();
             var messageSize = 2; // array brackets
             maxMessageSize -= 2048; // reserve 2k for header
-            var chunk = new Collection<NetworkMessage>();
+            var chunk = new Collection<MonitoredItemMessage>();
             while (processing) {
                 var notification = current.Current;
                 var messageCompleted = false;
@@ -105,8 +106,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                         Body = Encoding.UTF8.GetBytes(writer.ToString()),
                         ContentEncoding = "utf-8",
                         Timestamp = DateTime.UtcNow,
-                        ContentType = ContentMimeType.Json,
-                        MessageSchema = MessageSchemaTypes.NetworkMessageJson
+                        ContentType = ContentMimeType.UaJson,
+                        MessageSchema = MessageSchemaTypes.MonitoredItemMessageJson
                     };
                     AvgMessageSize = ((AvgMessageSize * MessagesProcessedCount) + encoded.Body.Length) /
                         (MessagesProcessedCount + 1);
@@ -121,13 +122,16 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         }
 
         /// <inheritdoc/>
-        public IEnumerable<NetworkMessageModel> Encode(
-            IEnumerable<DataSetWriterMessageModel> messages, int maxMessageSize) {
+        public IEnumerable<NetworkMessageModel> Encode(string writerGroupId,
+            IEnumerable<DataSetWriterMessageModel> messages,
+            string headerLayoutUri, NetworkMessageContentMask? contentMask,
+            OpcUa.Publisher.Models.DataSetOrderingType? order, int maxMessageSize) {
+
             // by design all messages are generated in the same session context,
             // therefore it is safe to get the first message's context
             var encodingContext = messages.FirstOrDefault(m => m.ServiceMessageContext != null)
                 ?.ServiceMessageContext;
-            var notifications = GetNetworkMessages(messages, encodingContext);
+            var notifications = GetMonitoredItemMessages(messages, encodingContext);
             if (notifications.Count() == 0) {
                 yield break;
             }
@@ -144,8 +148,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                     Body = Encoding.UTF8.GetBytes(writer.ToString()),
                     ContentEncoding = "utf-8",
                     Timestamp = DateTime.UtcNow,
-                    ContentType = ContentMimeType.Json,
-                    MessageSchema = MessageSchemaTypes.NetworkMessageJson
+                    ContentType = ContentMimeType.UaLegacyPublisher,
+                    MessageSchema = MessageSchemaTypes.MonitoredItemMessageJson
                 };
                 if (encoded.Body.Length > maxMessageSize) {
                     // this message is too large to be processed. Drop it
@@ -164,12 +168,11 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         }
 
         /// <summary>
-        /// Produce network messages from the data set message model
+        /// Produce Monitored Item Messages from the data set message model
         /// </summary>
         /// <param name="messages"></param>
         /// <param name="context"></param>
-        /// <returns></returns>
-        private IEnumerable<NetworkMessage> GetNetworkMessages(
+        private IEnumerable<MonitoredItemMessage> GetMonitoredItemMessages(
             IEnumerable<DataSetWriterMessageModel> messages, ServiceMessageContext context) {
             if (context?.NamespaceUris == null) {
                 // declare all notifications in messages dropped
@@ -178,47 +181,29 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                 }
                 yield break;
             }
-
-            // TODO: Honor single message
-            // TODO: Group by writer
             foreach (var message in messages) {
-                var networkMessage = new NetworkMessage() {
-                    MessageContentMask = ((NetworkMessageContentMask?)message.ContentMask)
-                        .ToStackType(MessageEncoding.Json),
-                    PublisherId = message.PublisherId,
-                    DataSetClassId = message.Writer?.DataSet?
-                        .DataSetMetaData?.DataSetClassId.ToString(),
-                    MessageId = message.SequenceNumber.ToString()
-                };
-                var notificationQueues = message.Notifications.GroupBy(m => m.NodeId)
-                    .Select(c => new Queue<MonitoredItemNotificationModel>(c.ToArray())).ToArray();
-                while (notificationQueues.Where(q => q.Any()).Any()) {
-                    var payload = notificationQueues
-                        .Select(q => q.Any() ? q.Dequeue() : null)
-                            .Where(s => s != null)
-                                .ToDictionary(
-                                    s => s.NodeId.ToExpandedNodeId(context.NamespaceUris)
-                                        .AsString(message.ServiceMessageContext),
-                                    s => s.Value);
-                    var dataSetMessage = new DataSetMessage {
-                        DataSetWriterId = message.Writer.DataSetWriterId,
-                        MetaDataVersion = new ConfigurationVersionDataType {
-                            MajorVersion = message.Writer?.DataSet?.DataSetMetaData?
-                                .ConfigurationVersion?.MajorVersion ?? 1,
-                            MinorVersion = message.Writer?.DataSet?.DataSetMetaData?
-                                .ConfigurationVersion?.MinorVersion ?? 0
-                        },
-                        MessageContentMask = (message.Writer?.MessageSettings?.DataSetMessageContentMask)
-                            .ToStackType(MessageEncoding.Json),
+                foreach (var notification in message.Notifications) {
+                    var result = new MonitoredItemMessage {
+                        MessageContentMask = (message.Writer?.MessageSettings?
+                            .DataSetMessageContentMask).ToMonitoredItemMessageMask(
+                                message.Writer?.DataSetFieldContentMask),
+                        ApplicationUri = message.ApplicationUri,
+                        EndpointUrl = message.EndpointUrl,
+                        ExtensionFields = message.Writer?.DataSet?.ExtensionFields,
+                        NodeId = notification.NodeId.ToExpandedNodeId(context.NamespaceUris),
                         Timestamp = message.TimeStamp ?? DateTime.UtcNow,
-                        SequenceNumber = message.SequenceNumber,
-                        Status = payload.Values.Any(s => StatusCode.IsNotGood(s.StatusCode)) ?
-                            StatusCodes.Bad : StatusCodes.Good,
-                        Payload = new DataSet(payload, (uint)message.Writer?.DataSetFieldContentMask.ToStackType())
+                        Value = notification.Value,
+                        DisplayName = notification.DisplayName,
+                        SequenceNumber = notification.SequenceNumber.GetValueOrDefault(0)
                     };
-                    networkMessage.Messages.Add(dataSetMessage);
+                    // force published timestamp into to source timestamp for the legacy heartbeat compatibility
+                    if (notification.IsHeartbeat &&
+                        ((result.MessageContentMask & (uint)MonitoredItemMessageContentMask.Timestamp) == 0) &&
+                        ((result.MessageContentMask & (uint)MonitoredItemMessageContentMask.SourceTimestamp) != 0)) {
+                        result.Value.SourceTimestamp = result.Timestamp;
+                    }
+                    yield return result;
                 }
-                yield return networkMessage;
             }
         }
     }

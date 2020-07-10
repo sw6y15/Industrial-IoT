@@ -37,9 +37,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
     using Opc.Ua;
 
     [Collection(PublishCollection.Name)]
-    public class WriterGroupProcessingEngineTests {
+    public class WriterGroupDataCollectorTests {
 
-        public WriterGroupProcessingEngineTests(TestServerFixture server) {
+        public WriterGroupDataCollectorTests(TestServerFixture server) {
             _server = server;
             _hostEntry = Try.Op(() => Dns.GetHostEntry(Opc.Ua.Utils.GetHostName()))
                 ?? Try.Op(() => Dns.GetHostEntry("localhost"));
@@ -52,7 +52,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
 
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
                 IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
-                var events = mock.Create<ObservableEventClient>();
+                var events = mock.Create<ObservableEventFixture>();
 
                 // Act
                 var result1 = await groups.AddWriterGroupAsync(new WriterGroupAddRequestModel {
@@ -132,7 +132,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
 
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
                 IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
-                var events = mock.Create<ObservableEventClient>();
+                var events = mock.Create<ObservableEventFixture>();
 
                 // Act
                 var result1 = await groups.AddWriterGroupAsync(new WriterGroupAddRequestModel {
@@ -199,7 +199,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
 
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
                 IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
-                var events = mock.Create<ObservableEventClient>();
+                var events = mock.Create<ObservableEventFixture>();
 
                 // Act
                 var result1 = await groups.AddWriterGroupAsync(new WriterGroupAddRequestModel {
@@ -274,7 +274,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
 
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
                 IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
-                var events = mock.Create<ObservableEventClient>();
+                var events = mock.Create<ObservableEventFixture>();
 
                 // Act
                 var result1 = await groups.AddWriterGroupAsync(new WriterGroupAddRequestModel {
@@ -333,8 +333,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                 // Second message should at least be good
                 var message = events.GetMessages(result1.WriterGroupId).WaitForEvent();
                 Assert.NotNull(message.Data);
-                Assert.NotNull(message.ContentEncoding);
                 Assert.Equal(ContentMimeType.Json, message.ContentType);
+                Assert.NotNull(message.ContentEncoding);
                 Assert.NotNull(message);
                 var value = message.Decode();
                 Assert.False(value.IsNull());
@@ -375,7 +375,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
 
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
                 IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
-                var events = mock.Create<ObservableEventClient>();
+                var events = mock.Create<ObservableEventFixture>();
 
                 // Act
                 var result1 = await groups.AddWriterGroupAsync(new WriterGroupAddRequestModel {
@@ -501,9 +501,10 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                 builder.RegisterType<WriterGroupEventBroker>().AsImplementedInterfaces().SingleInstance();
                 builder.RegisterType<WriterGroupRegistry>().AsImplementedInterfaces().SingleInstance();
                 builder.RegisterType<WriterGroupManagement>().AsImplementedInterfaces().SingleInstance();
-                builder.RegisterType<WriterRegistryEngineConnector>().AsImplementedInterfaces().SingleInstance()
+                builder.RegisterType<WriterRegistryConnector>().AsImplementedInterfaces().SingleInstance()
                     .AutoActivate(); // Create and register with broker
-                builder.RegisterType<WriterGroupProcessingEngine>().AsImplementedInterfaces();
+                builder.RegisterType<WriterGroupMessageEmitter>().AsImplementedInterfaces().SingleInstance();
+                builder.RegisterType<WriterGroupDataCollector>().AsImplementedInterfaces();
                 builder.RegisterType<UadpNetworkMessageEncoder>().AsImplementedInterfaces();
                 builder.RegisterType<JsonNetworkMessageEncoder>().AsImplementedInterfaces();
                 builder.RegisterType<BinarySampleMessageEncoder>().AsImplementedInterfaces();
@@ -511,7 +512,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                 builder.RegisterType<VariantEncoderFactory>().AsImplementedInterfaces();
                 builder.RegisterType<DefaultSessionManager>().AsImplementedInterfaces().SingleInstance();
                 builder.RegisterType<SubscriptionServices>().AsImplementedInterfaces().SingleInstance();
-                builder.RegisterType<ObservableEventClient>().AsSelf().AsImplementedInterfaces().SingleInstance();
+                builder.RegisterType<ObservableEventFixture>().AsSelf().AsImplementedInterfaces().SingleInstance();
             });
             return mock;
         }

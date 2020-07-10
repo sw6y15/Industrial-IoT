@@ -112,10 +112,5 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
         /// Created
         /// </summary>
         public PublisherOperationContextModel Created { get; set; }
-
-        /// <summary>
-        /// Message types to generate (publisher extension)
-        /// </summary>
-        public MessageSchema? Mode { get; set; }
     }
 }

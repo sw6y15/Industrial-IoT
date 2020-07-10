@@ -19,99 +19,77 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Controllers {
     public class WriterGroupSettingsController : ISettingsController {
 
         /// <summary>
-        /// Network message schema to produce
-        /// </summary>
-        public string MessageSchema {
-            get => _engine.MessageSchema;
-            set => _engine.MessageSchema = value;
-        }
-
-        /// <summary>
         /// Dataset writer group identifier
         /// </summary>
         public string WriterGroupId {
-            get => _engine.WriterGroupId;
-            set => _engine.WriterGroupId = value;
-        }
-
-        /// <summary>
-        /// Group version
-        /// </summary>
-        public uint? GroupVersion {
-            get => _engine.GroupVersion;
-            set => _engine.GroupVersion = value;
+            get => _emitter.WriterGroupId;
+            set => _emitter.WriterGroupId = value;
         }
 
         /// <summary>
         /// Max network message size
         /// </summary>
         public uint? MaxNetworkMessageSize {
-            get => _engine.MaxNetworkMessageSize;
-            set => _engine.MaxNetworkMessageSize = value;
+            get => _emitter.MaxNetworkMessageSize;
+            set => _emitter.MaxNetworkMessageSize = value;
+        }
+
+        /// <summary>
+        /// Message schema to produce
+        /// </summary>
+        public MessageSchema? Schema {
+            get => (MessageSchema?)_emitter.Schema;
+            set => _emitter.Schema =
+                (IIoT.OpcUa.Publisher.Models.MessageSchema?)value;
+        }
+
+        /// <summary>
+        /// Message encoding to use
+        /// </summary>
+        public MessageEncoding? Encoding {
+            get => (MessageEncoding?)_emitter.Encoding;
+            set => _emitter.Encoding =
+                (IIoT.OpcUa.Publisher.Models.MessageEncoding?)value;
         }
 
         /// <summary>
         /// Header layout uri
         /// </summary>
         public string HeaderLayoutUri {
-            get => _engine.HeaderLayoutUri;
-            set => _engine.HeaderLayoutUri = value;
+            get => _emitter.HeaderLayoutUri;
+            set => _emitter.HeaderLayoutUri = value;
         }
 
         /// <summary>
         /// Batch buffer size (Publisher extension)
         /// </summary>
         public int? BatchSize {
-            get => _engine.BatchSize;
-            set => _engine.BatchSize = value;
+            get => _emitter.BatchSize;
+            set => _emitter.BatchSize = value;
         }
 
         /// <summary>
         /// Publishing interval
         /// </summary>
         public TimeSpan? PublishingInterval {
-            get => _engine.PublishingInterval;
-            set => _engine.PublishingInterval = value;
-        }
-
-        /// <summary>
-        /// Keep alive time
-        /// </summary>
-        public TimeSpan? KeepAliveTime {
-            get => _engine.KeepAliveTime;
-            set => _engine.KeepAliveTime = value;
-        }
-
-        /// <summary>
-        /// Uadp Sampling offset
-        /// </summary>
-        public double? SamplingOffset {
-            get => _engine.SamplingOffset;
-            set => _engine.SamplingOffset = value;
+            get => _emitter.PublishingInterval;
+            set => _emitter.PublishingInterval = value;
         }
 
         /// <summary>
         /// Publishing offset for uadp messages
         /// </summary>
         public Dictionary<string, double> PublishingOffset {
-            get => _engine.PublishingOffset.EncodeAsDictionary();
-            set => _engine.PublishingOffset = value.DecodeAsList();
-        }
-
-        /// <summary>
-        /// Priority of the writer group
-        /// </summary>
-        public byte? Priority {
-            get => _engine.Priority;
-            set => _engine.Priority = value;
+            get => _emitter.PublishingOffset.EncodeAsDictionary();
+            set => _emitter.PublishingOffset = value.DecodeAsList();
         }
 
         /// <summary>
         /// Uadp dataset ordering
         /// </summary>
         public DataSetOrderingType? DataSetOrdering {
-            get => (DataSetOrderingType?)_engine.DataSetOrdering;
-            set => _engine.DataSetOrdering =
+            get => (DataSetOrderingType?)_emitter.DataSetOrdering;
+            set => _emitter.DataSetOrdering =
                 (IIoT.OpcUa.Publisher.Models.DataSetOrderingType?)value;
         }
 
@@ -119,26 +97,63 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher.Controllers {
         /// Network message content
         /// </summary>
         public NetworkMessageContentMask? NetworkMessageContentMask {
-            get => (NetworkMessageContentMask?)_engine.NetworkMessageContentMask;
-            set => _engine.NetworkMessageContentMask =
+            get => (NetworkMessageContentMask?)_emitter.MessageContentMask;
+            set => _emitter.MessageContentMask =
                 (IIoT.OpcUa.Publisher.Models.NetworkMessageContentMask?)value;
+        }
+
+        /// <summary>
+        /// Group version
+        /// </summary>
+        public uint? GroupVersion {
+            get => _collector.GroupVersion;
+            set => _collector.GroupVersion = value;
+        }
+
+        /// <summary>
+        /// Keep alive time
+        /// </summary>
+        public TimeSpan? KeepAliveTime {
+            get => _collector.KeepAliveTime;
+            set => _collector.KeepAliveTime = value;
+        }
+
+        /// <summary>
+        /// Uadp Sampling offset
+        /// </summary>
+        public double? SamplingOffset {
+            get => _collector.SamplingOffset;
+            set => _collector.SamplingOffset = value;
+        }
+
+        /// <summary>
+        /// Priority of the writer group
+        /// </summary>
+        public byte? Priority {
+            get => _collector.Priority;
+            set => _collector.Priority = value;
         }
 
         //  /// <summary>
         //  /// State of the processor
         //  /// </summary>
         //  public ProcessorState State {
-        //      get => _processor.State;
+        //      get => _collector.State;
         //      set { /* Only reporting */ }
         //  }
 
         /// <summary>
         /// Create controller with service
         /// </summary>
-        public WriterGroupSettingsController(IWriterGroupProcessingEngine engine) {
-            _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        /// <param name="collector"></param>
+        /// <param name="emitter"></param>
+        public WriterGroupSettingsController(IWriterGroupDataCollector collector,
+            IWriterGroupMessageEmitter emitter) {
+            _collector = collector ?? throw new ArgumentNullException(nameof(collector));
+            _emitter = emitter ?? throw new ArgumentNullException(nameof(emitter));
         }
 
-        private readonly IWriterGroupProcessingEngine _engine;
+        private readonly IWriterGroupDataCollector _collector;
+        private readonly IWriterGroupMessageEmitter _emitter;
     }
 }

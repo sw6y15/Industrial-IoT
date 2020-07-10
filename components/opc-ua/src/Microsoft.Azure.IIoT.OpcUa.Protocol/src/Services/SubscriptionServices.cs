@@ -76,10 +76,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
             public bool Active { get; private set; }
 
             /// <inheritdoc/>
-            public int NumberOfConnectionRetries =>
-                _outer._sessionManager.GetNumberOfConnectionRetries(_subscription.Connection);
-
-            /// <inheritdoc/>
             public ConnectionModel Connection => _subscription.Connection;
 
             /// <inheritdoc/>
@@ -93,6 +89,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
 
             /// <inheritdoc/>
             public event EventHandler<MonitoredItemStatusModel> OnMonitoredItemStatusChange;
+
+            /// <inheritdoc/>
+            public event EventHandler<EndpointConnectivityState> OnEndpointConnectivityChange;
 
             /// <summary>
             /// Subscription wrapper
@@ -109,6 +108,14 @@ namespace Microsoft.Azure.IIoT.OpcUa.Protocol.Services {
                 _logger = logger?.ForContext<SubscriptionWrapper>() ??
                     throw new ArgumentNullException(nameof(logger));
                 _lock = new SemaphoreSlim(1, 1);
+            }
+
+            /// <inheritdoc/>
+            public void UpdateConnectivityState(EndpointConnectivityState previous,
+                EndpointConnectivityState newValue) {
+                _logger.Information("Subscription {id} connectivitiy state changed from" +
+                    " {previous} to {newValue}", _subscription.Id, previous, newValue);
+                OnEndpointConnectivityChange.Invoke(this, newValue);
             }
 
             /// <inheritdoc/>

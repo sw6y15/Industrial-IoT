@@ -70,6 +70,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
                 ResolveDisplayName = model.DataSet?.SubscriptionSettings?.ResolveDisplayName == false ?
                     null : model.DataSet?.SubscriptionSettings?.ResolveDisplayName,
                 LastResultChange = model.DataSet?.State?.LastResultChange,
+                EndpointState = model.DataSet?.State?.EndpointState == EndpointConnectivityState.Disconnected ?
+                    null : model.DataSet?.State?.EndpointState,
                 LastResultDiagnostics = model.DataSet?.State?.LastResult?.Diagnostics,
                 LastResultErrorMessage = model.DataSet?.State?.LastResult?.ErrorMessage,
                 LastResultStatusCode = model.DataSet?.State?.LastResult?.StatusCode == 0 ?
@@ -178,12 +180,14 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
         private static PublishedDataSetSourceStateModel ToDataSetSourceState(DataSetWriterDocument document) {
             var lastResult = ToServiceResultModel(document);
             if (lastResult == null &&
-                document.LastResultChange == null) {
+                document?.LastResultChange == null &&
+                document?.EndpointState == null) {
                 return null;
             }
             return new PublishedDataSetSourceStateModel {
                 LastResult = lastResult,
-                LastResultChange = document.LastResultChange
+                LastResultChange = document.LastResultChange,
+                EndpointState = document.EndpointState
             };
         }
 

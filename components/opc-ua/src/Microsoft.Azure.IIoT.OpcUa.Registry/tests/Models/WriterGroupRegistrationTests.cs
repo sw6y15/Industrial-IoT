@@ -139,7 +139,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Registry.Models {
                         .ToList().EncodeAsDictionary())
                 .Without(x => x.IsDisabled)
                 .Without(x => x.Connected)
-                .With(x => x.MessageSchema, Core.MessageSchemaTypes.NetworkMessageUadp)
                 .With(x => x.WriterGroupId, id)
                 .With(x => x.DeviceId, PublisherRegistryEx.ToDeviceId(id))
                 .Without(x => x.NotSeenSince)

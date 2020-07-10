@@ -146,8 +146,13 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
             var writer = await _writers.UpdateAsync(dataSetWriterId, existing => {
                 if (existing?.DataSet?.State != null) {
                     updated = true;
-                    existing.DataSet.State.LastResult = state.LastResult;
-                    existing.DataSet.State.LastResultChange = lastResultChange;
+                    if (state.LastResultChange == null && state.EndpointState != null) {
+                        existing.DataSet.State.EndpointState = state.EndpointState;
+                    }
+                    else {
+                        existing.DataSet.State.LastResult = state.LastResult;
+                        existing.DataSet.State.LastResultChange = lastResultChange;
+                    }
                 }
                 else if (state.LastResult != null) {
                     updated = true;
@@ -156,7 +161,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                     }
                     existing.DataSet.State = new PublishedDataSetSourceStateModel {
                         LastResult = state.LastResult,
-                        LastResultChange = lastResultChange
+                        LastResultChange = state.EndpointState == null || state.LastResult != null ?
+                            lastResultChange : (DateTime?)null,
+                        EndpointState = state.EndpointState
                     };
                 }
                 return Task.FromResult(updated);

@@ -259,7 +259,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                 builder.RegisterType<NewtonSoftJsonConverters>().As<IJsonSerializerConverterProvider>();
                 builder.RegisterType<NewtonSoftJsonSerializer>().As<IJsonSerializer>();
                 builder.RegisterType<MockEndpoint>().AsSelf().As<IServiceEndpoint>().SingleInstance();
-                builder.RegisterType<MockEngine>().AsSelf().As<IWriterGroupProcessingEngine>().SingleInstance();
+                builder.RegisterType<MockEngine>().AsSelf().As<IWriterGroupDataCollector>().SingleInstance();
                 builder.RegisterType<MockClient>().AsSelf().As<IDataSetWriterRegistryEdgeClient>().SingleInstance();
                 builder.RegisterType<DataSetWriterRegistryLoader>().As<IDataSetWriterRegistryLoader>();
             });
@@ -300,7 +300,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             public List<DataSetWriterModel> Writers { get; } = new List<DataSetWriterModel>();
         }
 
-        public class MockEngine : IWriterGroupProcessingEngine {
+        public class MockEngine : IWriterGroupDataCollector {
             public string MessageSchema { get; set; }
             public string WriterGroupId { get; set; }
             public uint? GroupVersion { get; set; }

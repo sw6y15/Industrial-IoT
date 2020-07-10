@@ -18,7 +18,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
     /// <summary>
     /// Observe events emitted
     /// </summary>
-    public class ObservableEventClient : IEventClient, IWriterGroupStateReporter {
+    public class ObservableEventFixture : IEventClient, IWriterGroupStateReporter {
 
         public void OnDataSetEventStateChange(string dataSetWriterId,
             PublishedDataSetItemStateModel state) {

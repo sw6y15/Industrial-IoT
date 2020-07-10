@@ -33,7 +33,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
         /// <param name="endpoint"></param>
         /// <param name="logger"></param>
         public DataSetWriterRegistryLoader(IDataSetWriterRegistryEdgeClient client,
-            IWriterGroupProcessingEngine engine, IServiceEndpoint endpoint,
+            IWriterGroupDataCollector engine, IServiceEndpoint endpoint,
             ILogger logger) {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -95,14 +95,13 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                     }
                 }
             });
-            _logger.Debug("Applying DataSet changes to engine for group {writerGroup}...",
-                 _engine.WriterGroupId);
+            _logger.Debug("Applying DataSet changes to engine...");
 
             // Download all writers needed in parallel
             var downloaded = await Task.WhenAll(toDownload.Select(async writerId => {
                 try {
-                    _logger.Information("Loading DataSet {writerId} for {writerGroup}.",
-                        writerId, _engine.WriterGroupId);
+                    _logger.Information("Loading DataSet {writerId}...",
+                        writerId);
                     var result = await _client.GetDataSetWriterAsync(serviceEndpoint,
                         writerId, ct);
                     _state.AddOrUpdate(writerId, DateTime.UtcNow.ToString());
@@ -112,14 +111,13 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                     // Re-add if gone, but do not touch last state if it already exists
                     _writerIds.AddOrUpdate(writerId, true, (k, b) => b);
                     _state.AddOrUpdate(writerId, ex.Message);
-                    _logger.Error(ex, "Failed to download writer {writerId} for {writerGroup}.",
-                        writerId, _engine.WriterGroupId);
+                    _logger.Error(ex, "Failed to download writer {writerId}.",
+                        writerId);
                     return null;
                 }
             }));
 
-            _logger.Debug("Downloaded all writers for writer group {writerGroup}...",
-                 _engine.WriterGroupId);
+            _logger.Debug("Downloaded all writers ...");
 
             if (!ct.IsCancellationRequested) {
                 // Change engine - this should never fail
@@ -130,8 +128,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                 if (toAdd.Any()) {
                     _engine.AddWriters(toAdd);
                 }
-                _logger.Information("Applied changes to writer group {writerGroup}.",
-                    _engine.WriterGroupId);
+                _logger.Information("Applied changes to writer group.");
             }
         }
 
@@ -147,7 +144,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
             }
         }
 
-        private readonly IWriterGroupProcessingEngine _engine;
+        private readonly IWriterGroupDataCollector _engine;
         private readonly IDataSetWriterRegistryEdgeClient _client;
         private readonly ILogger _logger;
         private readonly IServiceEndpoint _endpoint;

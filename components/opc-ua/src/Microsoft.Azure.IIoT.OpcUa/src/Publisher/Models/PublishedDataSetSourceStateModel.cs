@@ -13,6 +13,11 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
     public class PublishedDataSetSourceStateModel {
 
         /// <summary>
+        /// Last endpoint state
+        /// </summary>
+        public EndpointConnectivityState? EndpointState { get; set; }
+
+        /// <summary>
         /// Last operation result
         /// </summary>
         public ServiceResultModel LastResult { get; set; }

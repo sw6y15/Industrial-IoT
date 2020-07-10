@@ -1,22 +1,18 @@
-// ------------------------------------------------------------
+﻿// ------------------------------------------------------------
 //  Copyright (c) Microsoft Corporation.  All rights reserved.
 //  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
 namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher {
+    using Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Models;
     using Microsoft.Azure.IIoT.OpcUa.Publisher.Models;
     using System;
     using System.Collections.Generic;
 
     /// <summary>
-    /// Writer group processor
+    /// Emits network messages for the writer group.
     /// </summary>
-    public interface IWriterGroupProcessingEngine {
-
-        /// <summary>
-        /// Message schema to use
-        /// </summary>
-        string MessageSchema { get; set; }
+    public interface IWriterGroupMessageEmitter {
 
         /// <summary>
         /// Dataset writer group identifier
@@ -24,14 +20,19 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher {
         string WriterGroupId { get; set; }
 
         /// <summary>
-        /// Group version
+        /// Network message encoding to generate
         /// </summary>
-        uint? GroupVersion { get; set; }
+        MessageEncoding? Encoding { get; set; }
+
+        /// <summary>
+        /// The message schema to use
+        /// </summary>
+        MessageSchema? Schema { get; set; }
 
         /// <summary>
         /// Network message content
         /// </summary>
-        NetworkMessageContentMask? NetworkMessageContentMask { get; set; }
+        NetworkMessageContentMask? MessageContentMask { get; set; }
 
         /// <summary>
         /// Max network message size
@@ -54,19 +55,9 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher {
         TimeSpan? PublishingInterval { get; set; }
 
         /// <summary>
-        /// Keep alive time
-        /// </summary>
-        TimeSpan? KeepAliveTime { get; set; }
-
-        /// <summary>
         /// Uadp dataset ordering
         /// </summary>
         DataSetOrderingType? DataSetOrdering { get; set; }
-
-        /// <summary>
-        /// Uadp Sampling offset
-        /// </summary>
-        double? SamplingOffset { get; set; }
 
         /// <summary>
         /// Publishing offset for uadp messages
@@ -74,32 +65,10 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher {
         List<double> PublishingOffset { get; set; }
 
         /// <summary>
-        /// Priority of the writer group
+        /// Enqueue new message for processing - will block
+        /// in case of backlog.
         /// </summary>
-        byte? Priority { get; set; }
-
-        /// <summary>
-        /// Diagnostic interval
-        /// </summary>
-        TimeSpan? DiagnosticsInterval { get; set; }
-
-        /// <summary>
-        /// Add writers to the group
-        /// </summary>
-        /// <param name="dataSetWriters"></param>
-        /// <returns></returns>
-        void AddWriters(IEnumerable<DataSetWriterModel> dataSetWriters);
-
-        /// <summary>
-        /// Remove writers from the group
-        /// </summary>
-        /// <param name="dataSetWriters"></param>
-        /// <returns></returns>
-        void RemoveWriters(IEnumerable<string> dataSetWriters);
-
-        /// <summary>
-        /// Remove all writers
-        /// </summary>
-        void RemoveAllWriters();
+        /// <param name="message"></param>
+        void Enqueue(DataSetWriterMessageModel message);
     }
 }

@@ -218,6 +218,12 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Storage.Default {
         public DateTime? LastResultChange { get; set; }
 
         /// <summary>
+        /// Endpoint state
+        /// </summary>
+        [DataMember]
+        public EndpointConnectivityState? EndpointState { get; set; }
+
+        /// <summary>
         /// Writer is disabled
         /// </summary>
         [DataMember]

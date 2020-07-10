@@ -26,11 +26,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Models {
         public DataSetWriterModel Writer { get; set; }
 
         /// <summary>
-        /// Content msask
-        /// </summary>
-        public uint? ContentMask { get; set; }
-
-        /// <summary>
         /// Timestamp of when this message was created
         /// </summary>
         public DateTime? TimeStamp { get; set; }
@@ -59,10 +54,5 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Models {
         /// Appplication url of the server the subscription is connected to.
         /// </summary>
         public string ApplicationUri { get; set; }
-
-        /// <summary>
-        /// Publisher id emitting
-        /// </summary>
-        public string PublisherId { get; set; }
     }
 }
