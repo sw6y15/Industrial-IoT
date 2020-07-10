@@ -10,7 +10,6 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher {
     using Microsoft.Azure.IIoT.Module.Framework.Client;
     using Microsoft.Azure.IIoT.Module.Framework.Services;
     using Microsoft.Azure.IIoT.Module;
-    using Microsoft.Azure.IIoT.OpcUa.Api.Publisher.Clients;
     using Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Clients;
     using Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services;
     using Microsoft.Azure.IIoT.OpcUa.Edge.Supervisor.Services;
@@ -287,8 +286,12 @@ namespace Microsoft.Azure.IIoT.Modules.OpcUa.Publisher {
             /// <param name="builder"></param>
             public static void ConfigureServices(ContainerBuilder builder) {
 
-                // Publisher engine and encoders
+                // Engines and encoders
                 builder.RegisterType<WriterGroupDataCollector>()
+                    .AsImplementedInterfaces().InstancePerLifetimeScope();
+                builder.RegisterType<WriterGroupMessageEmitter>()
+                    .AsImplementedInterfaces().InstancePerLifetimeScope();
+                builder.RegisterType<WriterGroupDiagnostics>()
                     .AsImplementedInterfaces().InstancePerLifetimeScope();
 
                 builder.RegisterType<UadpNetworkMessageEncoder>()
