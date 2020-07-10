@@ -3,159 +3,154 @@
 //  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Engine {
-#if FALSE
-    using Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Models;
-    using Microsoft.Azure.IIoT.OpcUa.Publisher;
-    using Microsoft.Azure.IIoT.Agent.Framework;
-    using Microsoft.Azure.IIoT.Agent.Framework.Models;
-    using Microsoft.Azure.IIoT.Exceptions;
+namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
     using Microsoft.Azure.IIoT.Module;
-    using Microsoft.Azure.IIoT.Serializers;
     using Serilog;
-    using System;
-    using System.Linq;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using System.Threading.Tasks.Dataflow;
     using Prometheus;
+    using System;
     using System.Text;
+    using System.Threading;
+
     /// <summary>
-    /// Dataflow engine
+    /// Log writer group diganotics
     /// </summary>
-    public class DataFlowProcessingEngine : IProcessingEngine, IDisposable {
+    public sealed class WriterGroupDiagnostics : IWriterGroupDiagnostics, IDisposable {
 
         /// <inheritdoc/>
-        public bool IsRunning { get; private set; }
+        public event EventHandler<EventArgs> BeforeDiagnosticsSending;
+        /// <inheritdoc/>
+        public event EventHandler<EventArgs> AfterDiagnosticsSending;
 
         /// <inheritdoc/>
-        public string Name => _messageTrigger.Id;
+        public TimeSpan? DiagnosticsInterval {
+            get => _diagnosticsInterval;
+            set {
+                if (_diagnosticsInterval != value) {
+                    if (value == null) {
+                        _diagnosticsOutputTimer.Change(Timeout.Infinite, Timeout.Infinite);
+                    }
+                    else {
+                        _diagnosticsOutputTimer.Change(value.Value, value.Value);
+                    }
+                    _diagnosticsInterval = value;
+                }
+            }
+        }
 
         /// <summary>
-        /// Create engine
+        /// Device id
         /// </summary>
-        /// <param name="messageTrigger"></param>
-        /// <param name="encoder"></param>
-        /// <param name="messageSink"></param>
-        /// <param name="engineConfiguration"></param>
-        /// <param name="logger"></param>
+        internal string DeviceId => _identity.DeviceId ?? "";
+
+        /// <summary>
+        /// Module id
+        /// </summary>
+        internal string ModuleId => _identity.ModuleId ?? "";
+
+        /// <summary>
+        /// Create writer group diagnostics logger
+        /// </summary>
         /// <param name="identity"></param>
-        public DataFlowProcessingEngine(IMessageTrigger messageTrigger, IMessageEncoder encoder,
-            IMessageSink messageSink, IEngineConfiguration engineConfiguration, ILogger logger,
-            IIdentity identity) {
-            _config = engineConfiguration;
-            _messageTrigger = messageTrigger;
-            _messageSink = messageSink;
-            _messageEncoder = encoder;
-            _logger = logger;
-            _identity = identity;
-
-            if (_config.BatchSize.HasValue && _config.BatchSize.Value > 1) {
-                _dataSetMessageBufferSize = _config.BatchSize.Value;
-            }
-            if (_config.MaxMessageSize.HasValue && _config.MaxMessageSize.Value > 0) {
-                _maxEncodedMessageSize = _config.MaxMessageSize.Value;
-            }
-
-            _diagnosticInterval = _config.DiagnosticsInterval.GetValueOrDefault(TimeSpan.Zero);
-            _batchTriggerInterval = _config.BatchTriggerInterval.GetValueOrDefault(TimeSpan.Zero);
+        /// <param name="logger"></param>
+        public WriterGroupDiagnostics(IIdentity identity, ILogger logger) {
+            _identity = identity ?? throw new ArgumentNullException(nameof(identity));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _diagnosticsOutputTimer = new Timer(DiagnosticsOutputTimer_Elapsed);
-            _batchTriggerIntervalTimer = new Timer(BatchTriggerIntervalTimer_Elapsed);
+        }
+
+        /// <inheritdoc/>
+        public void ReportDataSetWriterSubscriptionNotifications(string writerGroupId,
+            string dataSetWriterId, int count) {
+            Interlocked.Add(ref _valueChangesCount, count);
+            Interlocked.Increment(ref _dataChangesCount);
+            kDataChangesCount.WithLabels(DeviceId, ModuleId, writerGroupId)
+                .Set(_dataChangesCount);
+            kValueChangesCount.WithLabels(DeviceId, ModuleId, writerGroupId)
+                .Set(_valueChangesCount);
+        }
+
+        /// <inheritdoc/>
+        public void ReportBatchedDataSetMessageCount(string writerGroupId, int count) {
+            Interlocked.Exchange(ref _batchedDataSetMessageCount, count);
+        }
+
+        /// <inheritdoc/>
+        public void ReportDataSetMessagesReadyToEncode(string writerGroupId, int count) {
+            Interlocked.Exchange(ref _messagesReadyToEncodeCount, count);
+        }
+
+        /// <inheritdoc/>
+        public void ReportEncodedNetworkMessages(string writerGroupId, int count) {
+            Interlocked.Exchange(ref _encodedNetworkMessageCount, count);
+        }
+
+        /// <inheritdoc/>
+        public void ReportNetworkMessagesReadyToSend(string writerGroupId, int count) {
+            Interlocked.Exchange(ref _readyToSendCount, count);
+            kIoTHubQueueBuffer.WithLabels(DeviceId, ModuleId, writerGroupId)
+                .Set(_readyToSendCount);
+        }
+
+        /// <inheritdoc/>
+        public void ReportNetworkMessageSent(string writerGroupId) {
+            Interlocked.Increment(ref _sentMessagesCount);
+            kSentMessagesCount.WithLabels(DeviceId, ModuleId, writerGroupId)
+                .Set(_sentMessagesCount);
+        }
+
+        /// <inheritdoc/>
+        public void ReportConnectionRetry(string writerGroupId, string dataSetWriterId) {
+            Interlocked.Increment(ref _numberOfConnectionRetries);
+            kNumberOfConnectionRetries.WithLabels(DeviceId, ModuleId, writerGroupId)
+                .Set(_numberOfConnectionRetries);
+        }
+
+        /// <inheritdoc/>
+        public void ReportEncoderNetworkMessagesProcessedCount(string writerGroupId,
+            string messageScheme, uint count) {
+            Interlocked.Exchange(ref _messagesProcessedCount, count);
+            kMessagesProcessedCount.WithLabels(DeviceId, ModuleId, writerGroupId)
+                .Set(_messagesProcessedCount);
+        }
+
+        /// <inheritdoc/>
+        public void ReportEncoderNotificationsDroppedCount(string writerGroupId,
+            string messageScheme, uint count) {
+            Interlocked.Exchange(ref _notificationsDroppedCount, count);
+            kNotificationsDroppedCount.WithLabels(DeviceId, ModuleId, writerGroupId)
+                .Set(_notificationsDroppedCount);
+        }
+
+        /// <inheritdoc/>
+        public void ReportEncoderNotificationsProcessedCount(string writerGroupId,
+            string messageScheme, uint count) {
+            Interlocked.Exchange(ref _notificationsProcessedCount, count);
+            kNotificationsProcessedCount.WithLabels(DeviceId, ModuleId, writerGroupId)
+                .Set(_notificationsProcessedCount);
+        }
+
+        /// <inheritdoc/>
+        public void ReportEncoderAvgNotificationsPerMessage(string writerGroupId,
+            string messageScheme, double average) {
+            Interlocked.Exchange(ref _avgNotificationsPerMessage, average);
+            kNotificationsPerMessageAvg.WithLabels(DeviceId, ModuleId, writerGroupId)
+                .Set(_avgNotificationsPerMessage);
+        }
+
+        /// <inheritdoc/>
+        public void ReportEncoderAvgNetworkMessageSize(string writerGroupId,
+            string messageScheme, double average, uint max) {
+            Interlocked.Exchange(ref _avgMessageSize, average);
+            Interlocked.Exchange(ref _maxEncodedMessageSize, max);
+            kMessageSizeAvg.WithLabels(DeviceId, ModuleId, writerGroupId)
+                .Set(_avgMessageSize);
+            kChunkSizeAvg.WithLabels(DeviceId, ModuleId, writerGroupId)
+                .Set(_avgMessageSize / (4 * 1024));
         }
 
         /// <inheritdoc/>
         public void Dispose() {
-            _logger.Debug("Disposing {name}", Name);
-            _diagnosticsOutputTimer?.Dispose();
-            _batchTriggerIntervalTimer?.Dispose();
-        }
-
-        /// <inheritdoc/>
-        public Task<VariantValue> GetCurrentJobState() {
-            return Task.FromResult<VariantValue>(null);
-        }
-
-        /// <inheritdoc/>
-        public async Task RunAsync(ProcessMode processMode, CancellationToken cancellationToken) {
-            if (_messageEncoder == null) {
-                throw new NotInitializedException();
-            }
-            try {
-                if (IsRunning) {
-                    return;
-                }
-                IsRunning = true;
-                _encodingBlock = new TransformManyBlock<DataSetMessageModel[], NetworkMessageModel>(
-                    async input => {
-                        if (_batchTriggerInterval > TimeSpan.Zero) {
-                            _batchTriggerIntervalTimer.Change(_batchTriggerInterval, Timeout.InfiniteTimeSpan);
-                        }
-                        try {
-                            if (_dataSetMessageBufferSize == 1) {
-                                return await _messageEncoder.EncodeAsync(input, _maxEncodedMessageSize).ConfigureAwait(false);
-                            }
-                            else {
-                                return await _messageEncoder.EncodeBatchAsync(input, _maxEncodedMessageSize).ConfigureAwait(false);
-                            }
-                        }
-                        catch (Exception e) {
-                            _logger.Error(e, "Encoding failure");
-                            return Enumerable.Empty<NetworkMessageModel>();
-                        }
-                    },
-                    new ExecutionDataflowBlockOptions {
-                        CancellationToken = cancellationToken
-                    });
-
-                _batchDataSetMessageBlock = new BatchBlock<DataSetMessageModel>(
-                    _dataSetMessageBufferSize,
-                    new GroupingDataflowBlockOptions {
-                        CancellationToken = cancellationToken
-                    });
-
-                _batchNetworkMessageBlock = new BatchBlock<NetworkMessageModel>(
-                    _networkMessageBufferSize,
-                    new GroupingDataflowBlockOptions {
-                        CancellationToken = cancellationToken
-                    });
-
-                _sinkBlock = new ActionBlock<NetworkMessageModel[]>(
-                    async input => {
-                        if (input != null && input.Any()) {
-                            await _messageSink.SendAsync(input).ConfigureAwait(false);
-                        }
-                        else {
-                            _logger.Information("Sink block in engine {Name} triggered with empty input",
-                                Name);
-                        }
-                    },
-                    new ExecutionDataflowBlockOptions {
-                        CancellationToken = cancellationToken
-                    });
-                _batchDataSetMessageBlock.LinkTo(_encodingBlock);
-                _encodingBlock.LinkTo(_batchNetworkMessageBlock);
-                _batchNetworkMessageBlock.LinkTo(_sinkBlock);
-
-                _messageTrigger.OnMessage += MessageTriggerMessageReceived;
-                if (_diagnosticInterval > TimeSpan.Zero) {
-                    _diagnosticsOutputTimer.Change(_diagnosticInterval, _diagnosticInterval);
-                }
-
-                await _messageTrigger.RunAsync(cancellationToken).ConfigureAwait(false);
-
-            }
-            finally {
-                IsRunning = false;
-                _messageTrigger.OnMessage -= MessageTriggerMessageReceived;
-                _diagnosticsOutputTimer.Change(Timeout.Infinite, Timeout.Infinite);
-                _batchTriggerIntervalTimer.Change(Timeout.Infinite, Timeout.Infinite);
-                await _sinkBlock.Completion;
-            }
-        }
-
-        /// <inheritdoc/>
-        public Task SwitchProcessMode(ProcessMode processMode, DateTime? timestamp) {
-            return Task.CompletedTask;
+            _diagnosticsOutputTimer.Dispose();
         }
 
         /// <summary>
@@ -163,23 +158,24 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Engine {
         /// </summary>
         /// <param name="state"></param>
         private void DiagnosticsOutputTimer_Elapsed(object state) {
-            double totalDuration = _diagnosticStart != DateTime.MinValue ? (DateTime.UtcNow - _diagnosticStart).TotalSeconds : 0;
-            double valueChangesPerSec = _messageTrigger.ValueChangesCount / totalDuration;
-            double dataChangesPerSec = _messageTrigger.DataChangesCount / totalDuration;
-            double sentMessagesPerSec = totalDuration > 0 ? _messageSink.SentMessagesCount / totalDuration : 0;
-            double messageSizeAveragePercent = Math.Round(_messageEncoder.AvgMessageSize / _maxEncodedMessageSize * 100);
-            string messageSizeAveragePercentFormatted = $"({messageSizeAveragePercent}%)";
-            double chunkSizeAverage = _messageEncoder.AvgMessageSize / (4 * 1024);
-            double estimatedMsgChunksPerDay = Math.Ceiling(chunkSizeAverage) * sentMessagesPerSec * 60 * 60 * 24;
+            BeforeDiagnosticsSending.Invoke(this, EventArgs.Empty);
 
-            _logger.Debug("Identity {deviceId}; {moduleId}", _identity.DeviceId, _identity.ModuleId);
+            var totalDuration = _diagnosticStart != DateTime.MinValue ? (DateTime.UtcNow - _diagnosticStart).TotalSeconds : 0;
+            var valueChangesPerSec = _valueChangesCount / totalDuration;
+            var dataChangesPerSec = _dataChangesCount / totalDuration;
+            var sentMessagesPerSec = totalDuration > 0 ? _sentMessagesCount / totalDuration : 0;
+            var messageSizeAveragePercent = Math.Round(_avgMessageSize / _maxEncodedMessageSize * 100);
+            var messageSizeAveragePercentFormatted = $"({messageSizeAveragePercent}%)";
+            var chunkSizeAverage = _avgMessageSize / (4 * 1024);
+            var estimatedMsgChunksPerDay = Math.Ceiling(chunkSizeAverage) * sentMessagesPerSec * 60 * 60 * 24;
 
             var diagInfo = new StringBuilder();
-            diagInfo.AppendLine("\n  DIAGNOSTICS INFORMATION for          : {host}");
+            diagInfo.AppendLine();
+            diagInfo.AppendLine("  DIAGNOSTICS INFORMATION for          : {host}");
             diagInfo.AppendLine("  # Ingestion duration                 : {duration,14:dd\\:hh\\:mm\\:ss} (dd:hh:mm:ss)");
-            string dataChangesPerSecFormatted = _messageTrigger.DataChangesCount > 0 && totalDuration > 0 ? $"({dataChangesPerSec:0.##}/s)" : "";
+            var dataChangesPerSecFormatted = _dataChangesCount > 0 && totalDuration > 0 ? $"({dataChangesPerSec:0.##}/s)" : "";
             diagInfo.AppendLine("  # Ingress DataChanges (from OPC)     : {dataChangesCount,14:n0} {dataChangesPerSecFormatted}");
-            string valueChangesPerSecFormatted = _messageTrigger.ValueChangesCount > 0 && totalDuration > 0 ? $"({valueChangesPerSec:0.##}/s)" : "";
+            var valueChangesPerSecFormatted = _valueChangesCount > 0 && totalDuration > 0 ? $"({valueChangesPerSec:0.##}/s)" : "";
             diagInfo.AppendLine("  # Ingress ValueChanges (from OPC)    : {valueChangesCount,14:n0} {valueChangesPerSecFormatted}");
 
             diagInfo.AppendLine("  # Ingress BatchBlock buffer size     : {batchDataSetMessageBlockOutputCount,14:0}");
@@ -191,113 +187,52 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Engine {
             diagInfo.AppendLine("  # Encoder avg IoT Message body size  : {messageSizeAverage,14:n0} {messageSizeAveragePercentFormatted}");
             diagInfo.AppendLine("  # Encoder avg IoT Chunk (4 KB) usage : {chunkSizeAverage,14:0.#}");
             diagInfo.AppendLine("  # Estimated IoT Chunks (4 KB) per day: {estimatedMsgChunksPerDay,14:n0}");
-            diagInfo.AppendLine("  # Outgress Batch Block buffer size   : {batchNetworkMessageBlockOutputCount,14:0}");
             diagInfo.AppendLine("  # Outgress input buffer count        : {sinkBlockInputCount,14:n0}");
 
-            string sentMessagesPerSecFormatted = _messageSink.SentMessagesCount > 0 && totalDuration > 0 ? $"({sentMessagesPerSec:0.##}/s)" : "";
+            var sentMessagesPerSecFormatted = _sentMessagesCount > 0 && totalDuration > 0 ? $"({sentMessagesPerSec:0.##}/s)" : "";
             diagInfo.AppendLine("  # Outgress IoT message count         : {messageSinkSentMessagesCount,14:n0} {sentMessagesPerSecFormatted}");
             diagInfo.AppendLine("  # Connection retries                 : {connectionRetries,14:0}");
 
             _logger.Information(diagInfo.ToString(),
-                Name,
+                DeviceId, ModuleId,
                 TimeSpan.FromSeconds(totalDuration),
-                _messageTrigger.DataChangesCount, dataChangesPerSecFormatted,
-                _messageTrigger.ValueChangesCount, valueChangesPerSecFormatted,
-                _batchDataSetMessageBlock.OutputCount,
-                _encodingBlock.InputCount, _encodingBlock.OutputCount,
-                _messageEncoder.NotificationsProcessedCount,
-                _messageEncoder.NotificationsDroppedCount,
-                _messageEncoder.MessagesProcessedCount,
-                _messageEncoder.AvgNotificationsPerMessage,
-                _messageEncoder.AvgMessageSize, messageSizeAveragePercentFormatted,
+                _dataChangesCount, dataChangesPerSecFormatted,
+                _valueChangesCount, valueChangesPerSecFormatted,
+                _batchedDataSetMessageCount,
+                _messagesReadyToEncodeCount, _encodedNetworkMessageCount,
+                _notificationsProcessedCount,
+                _notificationsDroppedCount,
+                _messagesProcessedCount,
+                _avgNotificationsPerMessage,
+                _avgMessageSize, messageSizeAveragePercentFormatted,
                 chunkSizeAverage,
                 estimatedMsgChunksPerDay,
-                _batchNetworkMessageBlock.OutputCount,
-                _sinkBlock.InputCount,
-                _messageSink.SentMessagesCount, sentMessagesPerSecFormatted,
-                _messageTrigger.NumberOfConnectionRetries);
+                _readyToSendCount,
+                _sentMessagesCount, sentMessagesPerSecFormatted,
+                _numberOfConnectionRetries);
 
-            string deviceId = _identity.DeviceId ?? "";
-            string moduleId = _identity.ModuleId ?? "";
-            kDataChangesCount.WithLabels(deviceId, moduleId, Name)
-                .Set(_messageTrigger.DataChangesCount);
-            kDataChangesPerSecond.WithLabels(deviceId, moduleId, Name)
-                .Set(dataChangesPerSec);
-            kValueChangesCount.WithLabels(deviceId, moduleId, Name)
-                .Set(_messageTrigger.ValueChangesCount);
-            kValueChangesPerSecond.WithLabels(deviceId, moduleId, Name)
-                .Set(valueChangesPerSec);
-            kNotificationsProcessedCount.WithLabels(deviceId, moduleId, Name)
-                .Set(_messageEncoder.NotificationsProcessedCount);
-            kNotificationsDroppedCount.WithLabels(deviceId, moduleId, Name)
-                .Set(_messageEncoder.NotificationsDroppedCount);
-            kMessagesProcessedCount.WithLabels(deviceId, moduleId, Name)
-                .Set(_messageEncoder.MessagesProcessedCount);
-            kNotificationsPerMessageAvg.WithLabels(deviceId, moduleId, Name)
-                .Set(_messageEncoder.AvgNotificationsPerMessage);
-            kMessageSizeAvg.WithLabels(deviceId, moduleId, Name)
-                .Set(_messageEncoder.AvgMessageSize);
-            kIoTHubQueueBuffer.WithLabels(deviceId, moduleId, Name)
-                .Set(_sinkBlock.InputCount);
-            kSentMessagesCount.WithLabels(deviceId, moduleId, Name)
-                .Set(_messageSink.SentMessagesCount);
-            kSentMessagesPerSecond.WithLabels(deviceId, moduleId, Name)
-                .Set(sentMessagesPerSec);
-            kNumberOfConnectionRetries.WithLabels(deviceId, moduleId, Name)
-                .Set(_messageTrigger.NumberOfConnectionRetries);
-            kChunkSizeAvg.WithLabels(deviceId, moduleId, Name)
-                .Set(chunkSizeAverage);
-            kEstimatedMsgChunksPerday.WithLabels(deviceId, moduleId, Name)
-                .Set(estimatedMsgChunksPerDay);
+            AfterDiagnosticsSending.Invoke(this, EventArgs.Empty);
         }
 
-        /// <summary>
-        /// Batch trigger interval
-        /// </summary>
-        /// <param name="state"></param>
-        private void BatchTriggerIntervalTimer_Elapsed(object state) {
-            _batchDataSetMessageBlock?.TriggerBatch();
-        }
-
-        /// <summary>
-        /// Message received handler
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="args"></param>
-        private void MessageTriggerMessageReceived(object sender, DataSetMessageModel args) {
-            if (_diagnosticStart == DateTime.MinValue) {
-                _diagnosticStart = DateTime.UtcNow;
-
-                if (_batchTriggerInterval > TimeSpan.Zero) {
-                    _batchTriggerIntervalTimer.Change(_batchTriggerInterval, Timeout.InfiniteTimeSpan);
-                }
-            }
-            _batchDataSetMessageBlock.Post(args);
-        }
-
-        private readonly int _dataSetMessageBufferSize = 1;
-        private readonly int _networkMessageBufferSize = 1;
-        private readonly Timer _batchTriggerIntervalTimer;
-        private readonly TimeSpan _batchTriggerInterval;
-
-        private readonly int _maxEncodedMessageSize = 256 * 1024;
-
-        private readonly IEngineConfiguration _config;
-        private readonly IMessageSink _messageSink;
-        private readonly IMessageEncoder _messageEncoder;
-        private readonly IMessageTrigger _messageTrigger;
-        private readonly ILogger _logger;
-        private readonly IIdentity _identity;
-
-        private BatchBlock<DataSetMessageModel> _batchDataSetMessageBlock;
-        private BatchBlock<NetworkMessageModel> _batchNetworkMessageBlock;
-
+        // Diagnostics
+        private readonly DateTime _diagnosticStart = DateTime.UtcNow;
         private readonly Timer _diagnosticsOutputTimer;
-        private readonly TimeSpan _diagnosticInterval;
-        private DateTime _diagnosticStart = DateTime.MinValue;
 
-        private TransformManyBlock<DataSetMessageModel[], NetworkMessageModel> _encodingBlock;
-        private ActionBlock<NetworkMessageModel[]> _sinkBlock;
+        private TimeSpan? _diagnosticsInterval;
+        private double _avgNotificationsPerMessage;
+        private double _avgMessageSize;
+        private long _readyToSendCount;
+        private long _valueChangesCount;
+        private long _dataChangesCount;
+        private long _sentMessagesCount;
+        private long _batchedDataSetMessageCount;
+        private long _messagesReadyToEncodeCount;
+        private long _encodedNetworkMessageCount;
+        private long _numberOfConnectionRetries;
+        private long _notificationsProcessedCount;
+        private long _notificationsDroppedCount;
+        private long _messagesProcessedCount;
+        private long _maxEncodedMessageSize;
 
         private static readonly GaugeConfiguration kGaugeConfig = new GaugeConfiguration {
             LabelNames = new[] { "deviceid", "module", "triggerid" }
@@ -305,28 +240,18 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Engine {
         private static readonly Gauge kValueChangesCount = Metrics.CreateGauge(
             "iiot_edge_publisher_value_changes",
             "Opc ValuesChanges delivered for processing", kGaugeConfig);
-        private static readonly Gauge kValueChangesPerSecond = Metrics.CreateGauge(
-            "iiot_edge_publisher_value_changes_per_second",
-            "Opc ValuesChanges/second delivered for processing", kGaugeConfig);
         private static readonly Gauge kDataChangesCount = Metrics.CreateGauge(
             "iiot_edge_publisher_data_changes",
             "Opc DataChanges delivered for processing", kGaugeConfig);
-        private static readonly Gauge kDataChangesPerSecond = Metrics.CreateGauge(
-            "iiot_edge_publisher_data_changes_per_second",
-            "Opc DataChanges/second delivered for processing", kGaugeConfig);
         private static readonly Gauge kIoTHubQueueBuffer = Metrics.CreateGauge(
             "iiot_edge_publisher_iothub_queue_size",
             "IoT messages queued sending", kGaugeConfig);
         private static readonly Gauge kSentMessagesCount = Metrics.CreateGauge(
             "iiot_edge_publisher_sent_iot_messages",
             "IoT messages sent to hub", kGaugeConfig);
-        private static readonly Gauge kSentMessagesPerSecond = Metrics.CreateGauge(
-            "iiot_edge_publisher_sent_iot_messages_per_second",
-            "IoT messages/second sent to hub", kGaugeConfig);
         private static readonly Gauge kNumberOfConnectionRetries = Metrics.CreateGauge(
             "iiot_edge_publisher_connection_retries",
             "OPC UA connect retries", kGaugeConfig);
-
         private static readonly Gauge kNotificationsProcessedCount = Metrics.CreateGauge(
             "iiot_edge_publisher_encoded_notifications",
             "publisher engine encoded opc notifications count", kGaugeConfig);
@@ -342,13 +267,11 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Engine {
         private static readonly Gauge kMessageSizeAvg = Metrics.CreateGauge(
             "iiot_edge_publisher_encoded_message_size_average",
             "publisher engine iot message encoded body size average", kGaugeConfig);
-
         private static readonly Gauge kChunkSizeAvg = Metrics.CreateGauge(
             "iiot_edge_publisher_chunk_size_average",
             "IoT Hub chunk size average", kGaugeConfig);
-        private static readonly Gauge kEstimatedMsgChunksPerday = Metrics.CreateGauge(
-            "iiot_edge_publisher_estimated_message_chunks_per_day",
-            "Estimated IoT Hub messages chunks charged per day", kGaugeConfig);
+
+        private readonly IIdentity _identity;
+        private readonly ILogger _logger;
     }
-#endif
 }
