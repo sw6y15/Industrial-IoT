@@ -23,8 +23,8 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
     /// PubSub configuration service manages the Publish configuration surface
     /// on top of the entity repositories and provides eventing support.
     /// </summary>
-    public sealed class WriterGroupRegistry : IDataSetBatchOperations, IDataSetWriterRegistry,
-        IWriterGroupRegistry {
+    public sealed class WriterGroupRegistry : IDataSetWriterRegistry, IWriterGroupRegistry,
+        IDataSetBatchOperations, IWriterGroupBatchOperations {
 
         /// <summary>
         /// Create writer group registry service

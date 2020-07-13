@@ -27,7 +27,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Migration {
         /// <param name="logger"></param>
         /// <param name="config"></param>
         /// <param name="batch"></param>
-        public JobDatabaseMigration(IDatabaseServer databaseServer, IDataSetBatchOperations batch,
+        public JobDatabaseMigration(IDatabaseServer databaseServer, IWriterGroupBatchOperations batch,
             ILogger logger, IItemContainerConfig config = null) {
 
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -228,6 +228,6 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Migration {
 
         private readonly IDocuments _documents;
         private readonly ILogger _logger;
-        private readonly IDataSetBatchOperations _batch;
+        private readonly IWriterGroupBatchOperations _batch;
     }
 }

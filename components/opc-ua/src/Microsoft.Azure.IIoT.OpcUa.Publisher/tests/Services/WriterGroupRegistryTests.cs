@@ -1032,7 +1032,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
             })) {
 
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
-                IDataSetBatchOperations batch = mock.Create<WriterGroupRegistry>();
+                IWriterGroupBatchOperations batch = mock.Create<WriterGroupRegistry>();
                 IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
 
                 var writerGroup = new WriterGroupModel {
@@ -1200,7 +1200,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
             })) {
 
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
-                IDataSetBatchOperations batch = mock.Create<WriterGroupRegistry>();
+                IWriterGroupBatchOperations batch = mock.Create<WriterGroupRegistry>();
                 IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
 
                 var writerGroup = new WriterGroupModel {
@@ -1365,7 +1365,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
             })) {
 
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
-                IDataSetBatchOperations batch = mock.Create<WriterGroupRegistry>();
+                IWriterGroupBatchOperations batch = mock.Create<WriterGroupRegistry>();
                 IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
 
                 var writerGroup = new WriterGroupModel {
@@ -1520,7 +1520,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
             })) {
 
                 IDataSetWriterRegistry service = mock.Create<WriterGroupRegistry>();
-                IDataSetBatchOperations batch = mock.Create<WriterGroupRegistry>();
+                IWriterGroupBatchOperations batch = mock.Create<WriterGroupRegistry>();
                 IWriterGroupRegistry groups = mock.Create<WriterGroupRegistry>();
 
                 var writerGroup = new WriterGroupModel {

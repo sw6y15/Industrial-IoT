@@ -51,16 +51,5 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher {
             string dataSetWriterId, DataSetRemoveVariableBatchRequestModel request,
             PublisherOperationContextModel context = null,
             CancellationToken ct = default);
-
-        /// <summary>
-        /// Import a writer group
-        /// </summary>
-        /// <param name="writerGroup"></param>
-        /// <param name="context"></param>
-        /// <param name="ct"></param>
-        /// <returns></returns>
-        Task ImportWriterGroupAsync(WriterGroupModel writerGroup,
-            PublisherOperationContextModel context = null,
-            CancellationToken ct = default);
     }
 }
