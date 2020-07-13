@@ -4,6 +4,8 @@
 // ------------------------------------------------------------
 
 namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
+    using Microsoft.Azure.IIoT.OpcUa.Core.Models;
+    using Microsoft.Azure.IIoT.OpcUa.Registry.Models;
     using System.Linq;
 
     /// <summary>
@@ -26,6 +28,29 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
                 ExtensionFields = model.ExtensionFields?
                     .ToDictionary(k => k.Key, v => v.Value),
                 Name = model.Name
+            };
+        }
+
+        /// <summary>
+        /// Convert to info model
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="endpointId"></param>
+        /// <returns></returns>
+        public static PublishedDataSetSourceInfoModel AsPublishedDataSetSourceInfo(
+            this PublishedDataSetModel model, string endpointId) {
+            if (model == null) {
+                return null;
+            }
+            return new PublishedDataSetSourceInfoModel {
+                User = model.DataSetSource?.Connection?.User.Clone(),
+                OperationTimeout = model.DataSetSource?.Connection?.OperationTimeout,
+                DiagnosticsLevel = model.DataSetSource?.Connection?.Diagnostics?.Level,
+                SubscriptionSettings = model.DataSetSource?.SubscriptionSettings.Clone(),
+                EndpointId = endpointId,
+                ExtensionFields = model.ExtensionFields,
+                Name = model.Name,
+                State = null
             };
         }
     }

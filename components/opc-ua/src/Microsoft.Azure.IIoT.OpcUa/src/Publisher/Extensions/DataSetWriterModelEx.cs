@@ -30,5 +30,35 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
                 MessageSettings = model.MessageSettings.Clone()
             };
         }
+
+        /// <summary>
+        /// Convert to info model
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="endpointId"></param>
+        /// <param name="writerGroupId"></param>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public static DataSetWriterInfoModel AsDataSetWriterInfo(
+            this DataSetWriterModel model, string writerGroupId, string endpointId,
+            PublisherOperationContextModel context) {
+            if (model == null) {
+                return null;
+            }
+            return new DataSetWriterInfoModel {
+                DataSet = model.DataSet.AsPublishedDataSetSourceInfo(endpointId),
+                WriterGroupId = writerGroupId,
+                IsDisabled = false,
+                Created = context,
+                Updated = context,
+                DataSetFieldContentMask = model.DataSetFieldContentMask,
+                DataSetMetaDataSendInterval = model.DataSetMetaDataSendInterval,
+                DataSetWriterId = model.DataSetWriterId,
+                KeyFrameCount = model.KeyFrameCount,
+                GenerationId = model.GenerationId,
+                KeyFrameInterval = model.KeyFrameInterval,
+                MessageSettings = model.MessageSettings.Clone()
+            };
+        }
     }
 }

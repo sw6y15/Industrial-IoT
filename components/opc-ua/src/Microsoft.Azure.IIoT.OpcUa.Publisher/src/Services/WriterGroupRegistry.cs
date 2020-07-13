@@ -27,7 +27,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
         IWriterGroupRegistry {
 
         /// <summary>
-        /// Create publisher registry service
+        /// Create writer group registry service
         /// </summary>
         /// <param name="dataSets"></param>
         /// <param name="writers"></param>
@@ -176,6 +176,163 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
                     Try.Async(() => _dataSets.DeleteDataSetVariableAsync(endpointId,
                         item.Id, item.GenerationId))));
                 throw;
+            }
+        }
+
+        /// <inheritdoc/>
+        public async Task ImportWriterGroupAsync(WriterGroupModel writerGroup,
+            PublisherOperationContextModel context, CancellationToken ct) {
+            if (writerGroup == null) {
+                throw new ArgumentNullException(nameof(writerGroup));
+            }
+
+            var groupsToActivate = new HashSet<string>();
+
+            // Fix a writer group identifier and add or update the writer group
+            writerGroup.WriterGroupId ??= Guid.NewGuid().ToString();
+            var group = writerGroup.AsWriterGroupInfo(context);
+            var updated = false;
+            group = await _groups.AddOrUpdateAsync(writerGroup.WriterGroupId,
+                existing => {
+                    if (existing == null) {
+                        // keep disabled until we activate
+                        group.State = new WriterGroupStateModel {
+                            State = WriterGroupState.Disabled,
+                            LastStateChange = DateTime.UtcNow
+                        };
+                    }
+                    else {
+                        // Do not touch state of any existing group
+                        group.State = existing.State;
+                        updated = true;
+                    }
+                    return Task.FromResult(group);
+                }, ct);
+            if (updated) {
+                if (!string.IsNullOrEmpty(group.SiteId)) {
+                    // Notify update here - otherwise will update site id later and notify.
+                    await _groupEvents.NotifyAllAsync(
+                        l => l.OnWriterGroupUpdatedAsync(context, group));
+                }
+            }
+            else {
+                // Notify group was added
+                await _groupEvents.NotifyAllAsync(
+                    l => l.OnWriterGroupAddedAsync(context, group));
+            }
+            groupsToActivate.Add(group.WriterGroupId);
+
+            // Add writers and variables - TODO consider adding a bulk database api.
+            foreach (var dataSetWriter in writerGroup.DataSetWriters) {
+
+                // Find the specified endpoint in the connection model - continue if not exist
+                var ep = dataSetWriter.DataSet?.DataSetSource?.Connection?.Endpoint;
+                if (ep == null) {
+                    _logger.Error(
+                        "Tried to add dataset source without endpoint - skip writer {writer} " +
+                        "in group {group}.", dataSetWriter.DataSetWriterId, group.WriterGroupId);
+                    continue;
+                }
+                var endpoints = await _endpoints.QueryEndpointsAsync(
+                    new EndpointRegistrationQueryModel {
+                        Url = ep.Url,
+                        SecurityMode = ep.SecurityMode,
+                        SecurityPolicy = ep.SecurityPolicy,
+                    }, false, 1, ct);
+
+                var endpoint = endpoints.Items?.FirstOrDefault(); // Pick the first returned.
+                if (string.IsNullOrEmpty(endpoint?.Registration?.Id)) {
+                    _logger.Error(
+                        "Dataset source endpoint not in registry - skip writer {writer} " +
+                        "in group {group}.", dataSetWriter.DataSetWriterId, group.WriterGroupId);
+                    continue;
+                }
+
+                var groupOfWriter = group;
+                if (endpoint.Registration.SiteId != null) {
+                    //
+                    // We have a site - if the group had no site make sure it is updated
+                    // to reflect the writer endpoint site.
+                    //
+                    if (group.SiteId == null) {
+                        // Group has no site yet - use this site
+                        group.SiteId = endpoint.Registration.SiteId;
+                        await _groups.UpdateAsync(group.WriterGroupId, existing => {
+                            existing.SiteId = group.SiteId;
+                            return Task.FromResult(true);
+                        });
+                        await _groupEvents.NotifyAllAsync(
+                            l => l.OnWriterGroupUpdatedAsync(context, group));
+
+                        _logger.Information("Updated group {group} to move to site {site}.",
+                            groupOfWriter.WriterGroupId, group.SiteId);
+                    }
+
+                    //
+                    // Need to create a new group for the site of this writer. Also use a
+                    // new writer group id here so we have a unique one.
+                    //
+                    else if (group.SiteId != endpoint.Registration.SiteId) {
+                        groupOfWriter = group.Clone();
+                        groupOfWriter.SiteId = endpoint.Registration.SiteId;
+                        groupOfWriter.WriterGroupId = null;  // Assign
+                        groupOfWriter = await _groups.AddAsync(groupOfWriter, ct);
+
+                        await _groupEvents.NotifyAllAsync(
+                            l => l.OnWriterGroupAddedAsync(context, groupOfWriter));
+
+                        // Must also be activated at the end
+                        groupsToActivate.Add(groupOfWriter.WriterGroupId);
+
+                        _logger.Warning("Dataset writer {writer} was in site {site} but " +
+                            "its group was in {other} - added new group {group}.",
+                            dataSetWriter.DataSetWriterId, groupOfWriter.SiteId,
+                            group.SiteId, groupOfWriter.WriterGroupId);
+                    }
+                }
+
+                // now that we have a group - add the writer to this group
+                var writer = dataSetWriter.AsDataSetWriterInfo(groupOfWriter.WriterGroupId,
+                    endpoint.Registration.Id, context);
+                writer.DataSetWriterId ??= Guid.NewGuid().ToString();
+                writer = await _writers.AddOrUpdateAsync(writer.DataSetWriterId, existing => {
+                    updated = existing != null;
+                    return Task.FromResult(writer);
+                }, ct);
+                if (!updated) {
+                    // If added - notify, if updated, will be notified below.
+                    await _writerEvents.NotifyAllAsync(
+                        l => l.OnDataSetWriterAddedAsync(context, writer));
+                }
+
+                // Add variables to the writer if any
+                var variables = dataSetWriter.DataSet?.DataSetSource?
+                    .PublishedVariables?.PublishedData;
+                if (variables != null) {
+                    foreach (var dataSetVariable in variables) {
+                        dataSetVariable.Id = dataSetVariable.PublishedVariableNodeId.ToSha1Hash();
+                        await _dataSets.AddOrUpdateDataSetVariableAsync(
+                            writer.DataSetWriterId, dataSetVariable.Id,
+                            _ => Task.FromResult(dataSetVariable), ct);
+                    }
+                }
+                // Add events to the writer if any
+                var events = dataSetWriter.DataSet?.DataSetSource?
+                    .PublishedEvents;
+                if (events != null) {
+                    await _dataSets.AddOrUpdateEventDataSetAsync(
+                        writer.DataSetWriterId,
+                        _ => Task.FromResult(events), ct);
+                }
+
+                // Now notify about dataset writer change
+                await _writerEvents.NotifyAllAsync(
+                    l => l.OnDataSetWriterUpdatedAsync(context, writer.DataSetWriterId, writer));
+            }
+
+            // Now activate all groups we collected here
+            foreach (var activate in groupsToActivate) {
+                await ActivateDeactivateWriterGroupAsync(activate, true, context, ct);
             }
         }
 
@@ -962,26 +1119,29 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Services {
         private async Task<WriterGroupInfoModel> EnsureDefaultWriterGroupExistsAsync(
             string siteId, PublisherOperationContextModel context, CancellationToken ct) {
             var group = await _groups.AddOrUpdateAsync(siteId,
-                group => {
-                    if (group != null) {
-                        group = null; // No need to add
+                existing => {
+                    if (existing != null) {
+                        existing = null; // No need to update
                     }
                     else {
-                        group = new WriterGroupInfoModel {
+                        // Add new
+                        existing = new WriterGroupInfoModel {
                             Name = $"Default Writer Group ({siteId})",
                             WriterGroupId = siteId,
                             SiteId = siteId,
-                            PublishingInterval = TimeSpan.FromSeconds(10),
-                            BatchSize = 50,
-                            MaxNetworkMessageSize = 0,
                             Created = context,
                             Updated = context,
                             Schema = MessageSchema.PubSub,
-                            Encoding = MessageEncoding.Uadp
+                            Encoding = MessageEncoding.Json,
+                            State = new WriterGroupStateModel {
+                                State = WriterGroupState.Disabled,
+                                LastStateChange = DateTime.UtcNow
+                            }
                         };
                     }
-                    return Task.FromResult(group);
+                    return Task.FromResult(existing);
                 }, ct);
+
             if (group != null) {
                 // Group added
                 await _groupEvents.NotifyAllAsync(

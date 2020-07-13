@@ -392,7 +392,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                     EndpointId = "endpoint1", // See below
                     DataSetName = "TestSet",
                     SubscriptionSettings = new PublishedDataSetSourceSettingsModel {
-                        PublishingInterval = TimeSpan.FromSeconds(1)
+                        PublishingInterval = TimeSpan.FromMilliseconds(100)
                     },
                     WriterGroupId = result1.WriterGroupId
                 });
@@ -401,7 +401,7 @@ namespace Microsoft.Azure.IIoT.OpcUa.Edge.Publisher.Services {
                     result2.DataSetWriterId,
                     new DataSetAddVariableRequestModel {
                         PublishedVariableNodeId = "i=2258", // server time
-                        SamplingInterval = TimeSpan.FromSeconds(1)
+                        SamplingInterval = TimeSpan.FromMilliseconds(100)
                     });
 
                 // Activate the group - will start the engine

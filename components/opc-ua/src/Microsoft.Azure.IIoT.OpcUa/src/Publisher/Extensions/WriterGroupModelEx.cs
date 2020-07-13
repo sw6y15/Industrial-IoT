@@ -49,6 +49,46 @@ namespace Microsoft.Azure.IIoT.OpcUa.Publisher.Models {
         }
 
         /// <summary>
+        /// Convert to writer group info
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public static WriterGroupInfoModel AsWriterGroupInfo(this WriterGroupModel model,
+            PublisherOperationContextModel context) {
+            return new WriterGroupInfoModel {
+                BatchSize = model.BatchSize,
+                PublishingInterval = model.PublishingInterval,
+                HeaderLayoutUri = model.HeaderLayoutUri,
+                WriterGroupId = model.WriterGroupId,
+                KeepAliveTime = model.KeepAliveTime,
+                LocaleIds = model.LocaleIds?.ToList(),
+                MaxNetworkMessageSize = model.MaxNetworkMessageSize,
+                Encoding = model.Encoding,
+                Schema = model.Schema,
+                Name = model.Name,
+                Priority = model.Priority,
+                SiteId = model.SiteId,
+                MessageSettings = model.MessageSettings == null ? null :
+                    new WriterGroupMessageSettingsModel {
+                        DataSetOrdering = model.MessageSettings.DataSetOrdering,
+                        GroupVersion = model.MessageSettings.GroupVersion,
+                        NetworkMessageContentMask =
+                            model.MessageSettings.NetworkMessageContentMask,
+                        PublishingOffset = model.MessageSettings.PublishingOffset,
+                        SamplingOffset = model.MessageSettings.SamplingOffset
+                    },
+                Updated = context,
+                Created = context,
+                State = null,
+                GenerationId = null,
+                SecurityGroupId = null,
+                SecurityKeyServices = null,
+                SecurityMode = null // TODO
+            };
+        }
+
+        /// <summary>
         /// Create version hash from generations
         /// </summary>
         /// <returns></returns>

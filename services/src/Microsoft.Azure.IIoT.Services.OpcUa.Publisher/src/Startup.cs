@@ -38,6 +38,8 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher {
     using Prometheus;
     using System;
     using ILogger = Serilog.ILogger;
+    using Microsoft.Azure.IIoT.Storage.Default;
+    using Microsoft.Azure.IIoT.OpcUa.Publisher.Migration;
 
     /// <summary>
     /// Webservice startup
@@ -208,12 +210,12 @@ namespace Microsoft.Azure.IIoT.Services.OpcUa.Publisher {
             builder.RegisterType<CosmosDbServiceClient>()
                 .AsImplementedInterfaces();
 
-            //   // TODO: Enable as API so edge can call
-            // Bulk loading from edge
-            //   builder.RegisterType<NodeSetProcessor>()
-            //       .AsImplementedInterfaces();
-            //   builder.RegisterType<BulkPublishHandler>()
-            //       .AsImplementedInterfaces();
+            // ... migrate from job database on startup
+            builder.RegisterType<StartupMigration>()
+                .AutoActivate()
+                .AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<JobDatabaseMigration>()
+                .AsImplementedInterfaces().SingleInstance();
 
             // Registry services are required to lookup endpoints.
             builder.RegisterType<RegistryServicesApiAdapter>()
